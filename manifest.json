@@ -1,0 +1,17 @@
+{
+  "name": "Empanadas Control",
+  "short_name": "Empanadas",
+  "description": "Caderno de contabilidade diária de empanadas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#064e3b",
+  "theme_color": "#065f46",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23065f46'/><text y='130' x='50%' font-size='110' text-anchor='middle'>🫓</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
