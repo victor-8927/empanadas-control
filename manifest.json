@@ -1,17 +1,45 @@
 {
   "name": "Empanadas Control",
   "short_name": "Empanadas",
-  "description": "Caderno de contabilidade diária de empanadas",
+  "description": "Control de producción y ventas de empanadas",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#064e3b",
   "theme_color": "#065f46",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%23065f46'/><text y='130' x='50%' font-size='110' text-anchor='middle'>🫓</text></svg>",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "PDV — Punto de Venta",
+      "short_name": "PDV",
+      "description": "Abrir caja y registrar ventas",
+      "url": "/pdv",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Control de Producción",
+      "short_name": "Producción",
+      "description": "Registrar jornada diaria",
+      "url": "/",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }
