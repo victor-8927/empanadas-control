@@ -190,16 +190,17 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
     </div>
 
     <div style="margin-bottom:10px">
-      <span class="meta-badge">🎯 Meta: 100 empanadas / $1 c/u</span>
+      <span class="meta-badge">🎯 Meta base: 100 emp/día</span>
+      <span class="meta-badge" id="metaBadgeDia" style="background:#fef3c7;color:#92400e;display:none">⚠️ Meta hoy: <span id="metaBadgeVal">100</span></span>
     </div>
 
     <div class="card">
       <div class="card-title">Registro del Día</div>
       <div class="plan-real-grid">
         <div class="plan-box planned">
-          <div class="plan-box-label">📋 Planificado</div>
-          <div class="plan-box-value">100</div>
-          <div class="plan-box-sub">unidades meta</div>
+          <div class="plan-box-label">📋 Meta de Hoy</div>
+          <div class="plan-box-value" id="metaHoyNum">100</div>
+          <div class="plan-box-sub" id="metaHoySub">base diaria</div>
         </div>
         <div class="plan-box real">
           <div class="plan-box-label">✅ Realizado</div>
@@ -383,30 +384,71 @@ function capitalAcumulado(registros) {
 }
 
 // ============================================================
+// META RECALCULADA (100 base + déficit acumulado días anteriores)
+// Regla: si un día tuvo excedente, el día siguiente vuelve a META base.
+//        si un día quedó corto, el déficit se suma a la meta del siguiente.
+// ============================================================
+function calcMetaHoy(registros) {
+  const hoy = todayKey();
+  // Ordenar por fecha ascendente para calcular el acumulado cronológico
+  const pasados = registros
+    .filter(r => r.fecha < hoy)
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  let deficit = 0;
+  for (const r of pasados) {
+    const metaDia = META + deficit; // meta que ese día tenía que cumplir
+    const realizado = parseInt(r.cantidad) || 0;
+    if (realizado >= metaDia) {
+      // Meta cumplida o superada → el siguiente día empieza en META base
+      deficit = 0;
+    } else {
+      // No cumplió → acumula el faltante
+      deficit = metaDia - realizado;
+    }
+  }
+  return META + deficit; // meta de hoy
+}
+
+// ============================================================
 // CALC
 // ============================================================
-function calcLogic(cantidad) {
-  const insumos   = Math.min(cantidad, META) * COSTO_INSUMO;
+function calcLogic(cantidad, metaHoy = META) {
+  const insumos   = Math.min(cantidad, metaHoy) * COSTO_INSUMO;
   const sueldos   = SUELDO_FIJO;
   const capital   = CAPITAL_FIJO;
   const inversor  = INVERSOR_FIJO;
-  const lucro_base = (Math.min(cantidad, META) * PRECIO) - (insumos + sueldos + capital + inversor);
-  const excedente  = Math.max(0, cantidad - META) * PRECIO;
+  const lucro_base = (Math.min(cantidad, metaHoy) * PRECIO) - (insumos + sueldos + capital + inversor);
+  const excedente  = Math.max(0, cantidad - metaHoy) * PRECIO;
   const lucro_total_dueno = lucro_base + excedente;
-  const pct = Math.round((cantidad / META) * 100);
-  return { cantidad, insumos, sueldos, capital, inversor, lucro_base, excedente, lucro_total_dueno, pct };
+  const pct = Math.round((cantidad / metaHoy) * 100);
+  return { cantidad, metaHoy, insumos, sueldos, capital, inversor, lucro_base, excedente, lucro_total_dueno, pct };
 }
 
 // ============================================================
 // UI RENDER
 // ============================================================
+function renderMetaHoyUI(metaHoy) {
+  const deficit = metaHoy - META;
+  document.getElementById('metaHoyNum').textContent = metaHoy;
+  if (deficit > 0) {
+    document.getElementById('metaHoySub').textContent = `base 100 + ${deficit} deuda`;
+    document.getElementById('metaBadgeDia').style.display = 'inline-flex';
+    document.getElementById('metaBadgeVal').textContent = metaHoy;
+  } else {
+    document.getElementById('metaHoySub').textContent = 'base diaria';
+    document.getElementById('metaBadgeDia').style.display = 'none';
+  }
+}
+
 function renderCalc(c) {
   const qty = c.cantidad;
+  const metaHoy = c.metaHoy || META;
   document.getElementById('realNum').textContent = qty;
-  document.getElementById('realSub').textContent = qty >= META ? '✅ Meta alcanzada' : `${META - qty} para la meta`;
+  document.getElementById('realSub').textContent = qty >= metaHoy ? '✅ Meta alcanzada' : `${metaHoy - qty} para la meta`;
   const pctCapped = Math.min(c.pct, 100);
   document.getElementById('progressFill').style.width = pctCapped + '%';
-  document.getElementById('progressFill').className = 'progress-fill' + (qty > META ? ' over' : '');
+  document.getElementById('progressFill').className = 'progress-fill' + (qty > metaHoy ? ' over' : '');
   document.getElementById('pctLabel').textContent = c.pct + '%';
   document.getElementById('resInsumos').textContent = '$' + c.insumos.toFixed(2);
   document.getElementById('resSueldos').textContent = '$' + c.sueldos.toFixed(2);
@@ -417,13 +459,13 @@ function renderCalc(c) {
   if (c.excedente > 0) {
     banner.className = 'excedente-banner';
     document.getElementById('excedenteVal').textContent = '$' + c.excedente.toFixed(2);
-    document.getElementById('excedenteDesc').textContent = `${qty - META} empanadas extra × $1.00 = puro lucro`;
+    document.getElementById('excedenteDesc').textContent = `${qty - metaHoy} empanadas extra × $1.00 = puro lucro`;
   } else {
     banner.className = 'excedente-banner zero';
     document.getElementById('excedenteVal').textContent = '$0.00';
-    document.getElementById('excedenteDesc').textContent = qty >= META ? 'Sin excedente hoy' : `Vende ${META - qty} más para ver`;
+    document.getElementById('excedenteDesc').textContent = qty >= metaHoy ? 'Sin excedente hoy' : `Vende ${metaHoy - qty} más para ver`;
   }
-  document.getElementById('alertaMeta').style.display = qty >= META ? 'flex' : 'none';
+  document.getElementById('alertaMeta').style.display = qty >= metaHoy ? 'flex' : 'none';
   renderAmort();
 }
 
@@ -519,7 +561,10 @@ function updateOfflineBadge() {
 // ============================================================
 window.calcular = function() {
   const v = parseInt(document.getElementById('empInput').value) || 0;
-  renderCalc(calcLogic(v));
+  const d = getCache();
+  const metaHoy = calcMetaHoy(d.registros);
+  renderMetaHoyUI(metaHoy);
+  renderCalc(calcLogic(v, metaHoy));
 };
 
 window.guardar = async function() {
@@ -529,13 +574,16 @@ window.guardar = async function() {
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
 
-  const c = calcLogic(qty);
+  const d0 = getCache();
+  const metaHoy = calcMetaHoy(d0.registros);
+  const c = calcLogic(qty, metaHoy);
   const hoy = todayKey();
   const row = {
     fecha: hoy, cantidad: c.cantidad,
     insumos: c.insumos, sueldos: c.sueldos, capital: c.capital,
     inversor: c.inversor, lucro_base: c.lucro_base,
-    excedente: c.excedente, lucro_total_dueno: c.lucro_total_dueno, pct: c.pct
+    excedente: c.excedente, lucro_total_dueno: c.lucro_total_dueno, pct: c.pct,
+    meta_dia: metaHoy
   };
 
   // Salva local imediatamente
@@ -546,9 +594,10 @@ window.guardar = async function() {
   saveCache(d);
 
   renderAmort();
-  renderCalc(calcLogic(qty));
+  renderMetaHoyUI(metaHoy);
+  renderCalc(calcLogic(qty, metaHoy));
   document.getElementById('empInput').value = '';
-  renderCalc(calcLogic(0));
+  renderCalc(calcLogic(0, metaHoy));
 
   // Tenta enviar ao Supabase
   if (isOnline) {
@@ -595,7 +644,7 @@ window.renderHistorial = function() {
       <div class="hist-header" onclick="toggleHist(${i})">
         <div>
           <div class="hist-date">${formatDate(r.fecha)}${isPending ? '<span class="pending-dot" title="Pendiente de sync"></span>' : ''}</div>
-          <div class="hist-qty">${r.cantidad} empanadas • ${r.pct}% de meta</div>
+          <div class="hist-qty">${r.cantidad} empanadas • ${r.pct}% de meta${r.meta_dia && r.meta_dia != 100 ? ` (meta: ${r.meta_dia})` : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="hist-lucro ${r.lucro_total_dueno >= 0 ? 'pos' : 'neg'}">$${parseFloat(r.lucro_total_dueno).toFixed(2)}</span>
@@ -730,7 +779,10 @@ window.setTab = function(tab, el) {
 // ============================================================
 async function init() {
   document.getElementById('headerDate').textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long' });
-  renderCalc(calcLogic(0));
+  const d0 = getCache();
+  const metaInicial = calcMetaHoy(d0.registros);
+  renderMetaHoyUI(metaInicial);
+  renderCalc(calcLogic(0, metaInicial));
 
   window.addEventListener('online', async () => {
     isOnline = true; setSyncState('online');
@@ -760,8 +812,15 @@ async function init() {
     setSyncState('offline');
   }
 
+  // Após carregar dados do Supabase, recalcula a meta do dia com histórico atualizado
+  const dFinal = getCache();
+  const metaFinal = calcMetaHoy(dFinal.registros);
+  renderMetaHoyUI(metaFinal);
+  renderCalc(calcLogic(parseInt(document.getElementById('empInput').value) || 0, metaFinal));
+
   renderAmort();
   renderResumen();
+  renderHistorial();
   updateOfflineBadge();
 }
 
