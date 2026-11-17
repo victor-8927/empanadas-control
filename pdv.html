@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#065f46">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PDV Empanadas">
+<title>PDV · Empanadas</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --green:#065f46;--green-dark:#064e3b;--green-light:#ecfdf5;--green-mid:#d1fae5;
+  --amber:#92400e;--amber-light:#fffbeb;--amber-mid:#fef3c7;
+  --red:#991b1b;--red-light:#fef2f2;--red-mid:#fee2e2;
+  --blue:#1e40af;--blue-light:#eff6ff;
+  --text:#111827;--text2:#374151;--text3:#6b7280;--border:#e5e7eb;
+  --bg:#f9fafb;--white:#fff;--radius:14px;--shadow:0 2px 12px rgba(0,0,0,.08)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden}
+
+/* ── SCREENS ── */
+.screen{display:none;min-height:100dvh;flex-direction:column}
+.screen.active{display:flex}
+
+/* ── HEADER ── */
+.hdr{background:var(--green-dark);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:0;z-index:100}
+.hdr-title{font-size:17px;font-weight:800;letter-spacing:.3px}
+.hdr-sub{font-size:11px;opacity:.75;margin-top:1px}
+.hdr-badge{background:rgba(255,255,255,.18);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.hdr-btn{background:rgba(255,255,255,.18);border:none;color:#fff;padding:7px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
+.hdr-btn:active{opacity:.7}
+
+/* ── BODY ── */
+.body{flex:1;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+
+/* ── CARD ── */
+.card{background:var(--white);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+
+/* ── INPUTS ── */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.lbl{font-size:12px;font-weight:600;color:var(--text3)}
+.inp{background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:15px;color:var(--text);width:100%;outline:none;transition:border .2s}
+.inp:focus{border-color:var(--green)}
+.inp.big{font-size:28px;font-weight:800;text-align:center;padding:16px;letter-spacing:1px}
+.inp[type=number]{-moz-appearance:textfield}
+.inp[type=number]::-webkit-outer-spin-button,.inp[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+
+/* ── BUTTONS ── */
+.btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .15s,transform .1s;text-align:center}
+.btn:active{opacity:.8;transform:scale(.98)}
+.btn-green{background:var(--green);color:#fff}
+.btn-red{background:#dc2626;color:#fff}
+.btn-gray{background:#e5e7eb;color:var(--text2)}
+.btn-sm{padding:9px 16px;font-size:13px;border-radius:9px;width:auto;display:inline-block}
+.btn-row{display:flex;gap:8px}
+.btn-row .btn{flex:1}
+
+/* ── NUMPAD ── */
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.nk{background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:0;font-size:22px;font-weight:700;color:var(--text);cursor:pointer;aspect-ratio:1;display:flex;align-items:center;justify-content:center;transition:background .1s}
+.nk:active{background:var(--green-light)}
+.nk.zero{grid-column:span 2;aspect-ratio:auto;padding:14px}
+.nk.del{background:var(--red-light);color:var(--red)}
+.nk.ok{background:var(--green);color:#fff;grid-column:span 3;padding:16px;aspect-ratio:auto;font-size:17px}
+
+/* ── DISPLAY VENTA ── */
+.sale-display{text-align:center;padding:20px 16px 12px}
+.sd-qty{font-size:60px;font-weight:900;color:var(--green);line-height:1}
+.sd-label{font-size:13px;color:var(--text3);margin-top:4px}
+.sd-total{font-size:38px;font-weight:900;color:var(--text);margin-top:12px}
+.sd-total-label{font-size:12px;color:var(--text3)}
+
+/* ── CAMBIO ── */
+.cambio-box{background:var(--green-light);border:1px solid var(--green-mid);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.cambio-label{font-size:13px;color:var(--green);font-weight:700}
+.cambio-value{font-size:22px;font-weight:900;color:var(--green)}
+
+/* ── RECEIPT ── */
+.receipt{background:var(--white);border-radius:var(--radius);padding:20px;font-family:'Courier New',Courier,monospace;box-shadow:var(--shadow);max-width:320px;margin:0 auto}
+.receipt-header{text-align:center;border-bottom:2px dashed var(--border);padding-bottom:12px;margin-bottom:12px}
+.receipt-title{font-size:20px;font-weight:900;letter-spacing:2px}
+.receipt-sub{font-size:11px;color:var(--text3);margin-top:3px}
+.receipt-serie{font-size:14px;font-weight:700;margin-top:8px;background:var(--green-light);color:var(--green);padding:4px 12px;border-radius:6px;display:inline-block}
+.receipt-row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0}
+.receipt-row.total{font-size:16px;font-weight:900;border-top:2px solid var(--border);padding-top:8px;margin-top:4px}
+.receipt-row.cambio{color:var(--green);font-weight:700}
+.receipt-footer{text-align:center;border-top:2px dashed var(--border);padding-top:12px;margin-top:12px;font-size:11px;color:var(--text3)}
+
+/* ── Z-REPORT ── */
+.zrow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.zrow:last-child{border-bottom:none}
+.zrow-serie{font-weight:700;color:var(--green)}
+.zrow-anulada{text-decoration:line-through;opacity:.5}
+.ztotal-box{background:var(--green-dark);color:#fff;border-radius:12px;padding:14px 16px;text-align:center;margin-top:4px}
+.zt-label{font-size:12px;opacity:.8}
+.zt-value{font-size:28px;font-weight:900;margin-top:2px}
+
+/* ── STATUS DOTS ── */
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px}
+.sync-dot.offline{background:#ef4444}
+.sync-dot.syncing{background:#60a5fa;animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1f2937;color:#fff;padding:10px 20px;border-radius:30px;font-size:14px;font-weight:600;z-index:9999;transition:transform .3s;white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── VENTA LIST (caja abierta) ── */
+.venta-pill{background:var(--green-light);border-radius:9px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:12px}
+.vp-serie{font-weight:700;color:var(--green)}
+.vp-info{color:var(--text3)}
+.vp-total{font-weight:800;color:var(--text)}
+
+/* ── ANULAR ── */
+.btn-anular{background:var(--red-light);color:var(--red);border:none;padding:4px 10px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer}
+
+/* ── PRINT ── */
+@media print{
+  body{background:#fff}
+  .no-print{display:none!important}
+  .receipt{box-shadow:none;border-radius:0;max-width:100%;padding:0}
+  .screen{display:flex!important}
+  #screenRecibo > *:not(.receipt){display:none!important}
+}
+
+/* ── LOGO LINK ── */
+.back-link{font-size:12px;color:rgba(255,255,255,.7);text-decoration:none;display:flex;align-items:center;gap:4px}
+.back-link:active{opacity:.6}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: APERTURA DE CAJA
+══════════════════════════════════════════════ -->
+<div class="screen active" id="screenApertura">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">🫓 PDV Empanadas</div>
+      <div class="hdr-sub">Punto de Venta</div>
+    </div>
+    <a href="index.html" class="back-link">← Control</a>
+  </div>
+  <div class="body">
+
+    <div style="text-align:center;padding:20px 0 8px">
+      <div style="font-size:48px">🏪</div>
+      <div style="font-size:20px;font-weight:800;margin-top:8px">Apertura de Caja</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:4px" id="apFecha">—</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Datos de Apertura</div>
+      <div class="field">
+        <div class="lbl">Operador / Cajero</div>
+        <input class="inp" id="apOperador" type="text" placeholder="Nombre del operador" value="Cajero">
+      </div>
+      <div class="field">
+        <div class="lbl">Fondo Inicial ($)</div>
+        <input class="inp" id="apFondo" type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal">
+      </div>
+    </div>
+
+    <button class="btn btn-green" onclick="abrirCaja()">✅ Abrir Caja</button>
+    <div style="text-align:center;font-size:12px;color:var(--text3)">
+      <span class="sync-dot" id="apSyncDot"></span><span id="apSyncLabel">conectando...</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: PDV — VENTA
+══════════════════════════════════════════════ -->
+<div class="screen" id="screenVenta">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">🫓 PDV</div>
+      <div class="hdr-sub" id="vtOperadorLabel">Cajero</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="sync-dot" id="vtSyncDot"></span>
+      <button class="hdr-btn" onclick="irCierre()">Cerrar Caja</button>
+    </div>
+  </div>
+  <div class="body">
+
+    <!-- Display principal -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="sale-display">
+        <div class="sd-qty" id="vtQty">0</div>
+        <div class="sd-label">empanadas</div>
+        <div class="sd-total" id="vtTotal">$0.00</div>
+        <div class="sd-total-label">TOTAL</div>
+      </div>
+
+      <!-- Numpad -->
+      <div style="padding:0 14px 14px">
+        <div class="numpad" id="numpad">
+          <button class="nk" data-n="1">1</button>
+          <button class="nk" data-n="2">2</button>
+          <button class="nk" data-n="3">3</button>
+          <button class="nk" data-n="4">4</button>
+          <button class="nk" data-n="5">5</button>
+          <button class="nk" data-n="6">6</button>
+          <button class="nk" data-n="7">7</button>
+          <button class="nk" data-n="8">8</button>
+          <button class="nk" data-n="9">9</button>
+          <button class="nk zero" data-n="0">0</button>
+          <button class="nk del" data-n="del">⌫</button>
+          <button class="nk ok" onclick="irCobro()">COBRAR →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ventas del día (mini-lista) -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Ventas del día</span>
+        <span id="vtContador" style="color:var(--green);font-size:13px;font-weight:800">0 ventas · $0.00</span>
+      </div>
+      <div id="vtList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto">
+        <div style="text-align:center;color:var(--text3);font-size:13px;padding:12px 0">Sin ventas aún</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: COBRO
+══════════════════════════════════════════════ -->
+<div class="screen" id="screenCobro">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">💵 Cobro</div>
+      <div class="hdr-sub" id="cobroSerie">Serie: —</div>
+    </div>
+    <button class="hdr-btn" onclick="goScreen('screenVenta')">← Cancelar</button>
+  </div>
+  <div class="body">
+
+    <div class="card" style="text-align:center">
+      <div style="font-size:14px;color:var(--text3);margin-bottom:4px" id="cobroCantLabel">0 empanadas</div>
+      <div style="font-size:40px;font-weight:900;color:var(--green)" id="cobroTotal">$0.00</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:4px">TOTAL A COBRAR</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Monto recibido</div>
+      <input class="inp big" id="pagoInput" type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal" oninput="calcCambio()">
+      <div class="cambio-box" id="cambioBox" style="display:none">
+        <div class="cambio-label">💰 Cambio</div>
+        <div class="cambio-value" id="cambioVal">$0.00</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Método de Pago</div>
+      <div class="btn-row" id="metodoRow">
+        <button class="btn btn-gray btn-sm metodo-btn active-metodo" data-m="efectivo" onclick="selMetodo(this)">💵 Efectivo</button>
+        <button class="btn btn-gray btn-sm metodo-btn" data-m="transferencia" onclick="selMetodo(this)">📲 Transfer.</button>
+        <button class="btn btn-gray btn-sm metodo-btn" data-m="otro" onclick="selMetodo(this)">Otro</button>
+      </div>
+    </div>
+
+    <!-- Cobros rápidos -->
+    <div class="card">
+      <div class="card-title">Cobro rápido</div>
+      <div class="btn-row" id="quickPay"></div>
+    </div>
+
+    <button class="btn btn-green" onclick="confirmarVenta()">✅ Confirmar Venta</button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: RECIBO
+══════════════════════════════════════════════ -->
+<div class="screen" id="screenRecibo">
+  <div class="hdr no-print">
+    <div>
+      <div class="hdr-title">🧾 Recibo</div>
+      <div class="hdr-sub" id="reciboSerieLbl">—</div>
+    </div>
+    <button class="hdr-btn" onclick="goScreen('screenVenta');resetVenta()">Nueva Venta</button>
+  </div>
+  <div class="body">
+
+    <!-- Recibo imprimible -->
+    <div class="receipt" id="receiptBlock">
+      <div class="receipt-header">
+        <div class="receipt-title">🫓 EMPANADAS</div>
+        <div class="receipt-sub">Carora · Venezuela</div>
+        <div class="receipt-serie" id="rSerie">11-0001</div>
+      </div>
+
+      <div class="receipt-row"><span>Fecha</span><span id="rFecha">—</span></div>
+      <div class="receipt-row"><span>Hora</span><span id="rHora">—</span></div>
+      <div class="receipt-row"><span>Operador</span><span id="rOperador">—</span></div>
+      <div class="receipt-row" style="margin-top:8px"><span>─────────────────</span></div>
+      <div class="receipt-row"><span id="rProducto">Empanadas ×0</span><span id="rSubtotal">$0.00</span></div>
+      <div class="receipt-row total"><span>TOTAL</span><span id="rTotal">$0.00</span></div>
+      <div class="receipt-row"><span>Pagó</span><span id="rPago">$0.00</span></div>
+      <div class="receipt-row cambio"><span>Cambio</span><span id="rCambio">$0.00</span></div>
+      <div class="receipt-row"><span>Método</span><span id="rMetodo">Efectivo</span></div>
+
+      <div class="receipt-footer">
+        ¡Gracias por su compra!<br>
+        Vuelva pronto 🫓
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="btn-row no-print" style="margin-top:4px">
+      <button class="btn btn-gray" onclick="imprimirRecibo()">🖨️ Imprimir</button>
+      <button class="btn btn-green" onclick="compartirRecibo()">📲 Compartir</button>
+    </div>
+
+    <button class="btn btn-gray no-print" onclick="goScreen('screenVenta');resetVenta()" style="margin-top:4px">← Volver al PDV</button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN: CIERRE DE CAJA (Z-REPORT)
+══════════════════════════════════════════════ -->
+<div class="screen" id="screenCierre">
+  <div class="hdr">
+    <div>
+      <div class="hdr-title">📊 Cierre de Caja</div>
+      <div class="hdr-sub" id="cierreOperadorLbl">—</div>
+    </div>
+    <button class="hdr-btn" onclick="goScreen('screenVenta')">← Volver</button>
+  </div>
+  <div class="body">
+
+    <!-- Resumen Z -->
+    <div class="card">
+      <div class="card-title">Resumen del Día</div>
+      <div class="zrow"><span>Apertura</span><span id="zApertura">—</span></div>
+      <div class="zrow"><span>Operador</span><span id="zOperador">—</span></div>
+      <div class="zrow"><span>Fondo inicial</span><span id="zFondo">$0.00</span></div>
+      <div class="zrow"><span>Total ventas</span><span id="zTotalVentas" style="font-weight:800">0</span></div>
+      <div class="zrow"><span>Ventas anuladas</span><span id="zAnuladas" style="color:var(--red)">0</span></div>
+      <div class="ztotal-box">
+        <div class="zt-label">TOTAL COBRADO</div>
+        <div class="zt-value" id="zTotalCobrado">$0.00</div>
+      </div>
+    </div>
+
+    <!-- Detalle de ventas -->
+    <div class="card">
+      <div class="card-title">Detalle de Ventas</div>
+      <div id="zDetalle" style="display:flex;flex-direction:column;gap:4px">
+        <div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn-gray" onclick="imprimirZReport()">🖨️ Imprimir Z</button>
+      <button class="btn btn-red" onclick="confirmarCierre()">🔒 Cerrar Caja</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONSTANTES
+// ══════════════════════════════════════════════
+const SUPA_URL = 'https://wziprddrflgpzankofad.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6aXByZGRyZmxncHphbmtvZmFkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NDMyNjMsImV4cCI6MjA5NDExOTI2M30.hWrdRYH6M6Voii8uo3MmJB8BKNZOOWRhjls7DFg4pcs';
+const PRECIO_UNIT = 1.00;
+
+// ══════════════════════════════════════════════
+// SUPABASE CLIENT
+// ══════════════════════════════════════════════
+const SH = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+async function sbInsert(table, row) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method:'POST', headers:SH, body:JSON.stringify(row) });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbSelect(table, filter='') {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*${filter}&order=created_at.desc`, { headers:SH });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+}
+async function sbPatch(table, filter, body) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filter}`, { method:'PATCH', headers:SH, body:JSON.stringify(body) });
+  if (!r.ok) throw new Error(await r.text());
+}
+
+// ══════════════════════════════════════════════
+// LOCAL STATE
+// ══════════════════════════════════════════════
+function getState() {
+  try { return JSON.parse(localStorage.getItem('pdv_state') || 'null'); } catch(e) { return null; }
+}
+function saveState(s) { try { localStorage.setItem('pdv_state', JSON.stringify(s)); } catch(e) {} }
+function getVentas() {
+  try { return JSON.parse(localStorage.getItem('pdv_ventas_local') || '[]'); } catch(e) { return []; }
+}
+function saveVentas(v) { try { localStorage.setItem('pdv_ventas_local', JSON.stringify(v)); } catch(e) {} }
+function getQueue() {
+  try { return JSON.parse(localStorage.getItem('pdv_queue') || '[]'); } catch(e) { return []; }
+}
+function saveQueue(q) { try { localStorage.setItem('pdv_queue', JSON.stringify(q)); } catch(e) {} }
+
+// ══════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════
+let isOnline = navigator.onLine;
+
+function todayKey() {
+  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+}
+function nowTime() {
+  const d = new Date();
+  return d.toTimeString().slice(0,8); // HH:MM:SS
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function fmtMoney(n) { return '$' + parseFloat(n || 0).toFixed(2); }
+
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random()*16|0, v = c==='x'?r:r&0x3|0x8;
+    return v.toString(16);
+  });
+}
+
+// Serie: MM-NNNN  (mes 2 dígitos - número 4 dígitos secuencial global)
+function nextSerie() {
+  const mes = String(new Date().getMonth()+1).padStart(2,'0');
+  const ventas = getVentas();
+  // Busca el mayor número secuencial en todas las ventas del mes actual
+  const prefix = mes + '-';
+  let maxN = 0;
+  for (const v of ventas) {
+    if (v.serie && v.serie.startsWith(prefix)) {
+      const n = parseInt(v.serie.slice(3)) || 0;
+      if (n > maxN) maxN = n;
+    }
+  }
+  return prefix + String(maxN + 1).padStart(4, '0');
+}
+
+function showToast(msg, dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function setSyncDots(state) {
+  ['apSyncDot','vtSyncDot'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'sync-dot' + (state==='offline'?' offline': state==='syncing'?' syncing':'');
+  });
+  const lbl = document.getElementById('apSyncLabel');
+  if (lbl) lbl.textContent = state==='offline' ? 'sin conexión' : state==='syncing' ? 'sincronizando…' : 'en línea';
+}
+
+// ══════════════════════════════════════════════
+// QUEUE OFFLINE → sync cuando vuelve la red
+// ══════════════════════════════════════════════
+async function syncQueue() {
+  const q = getQueue();
+  if (!q.length) return;
+  setSyncDots('syncing');
+  const failed = [];
+  for (const item of q) {
+    try {
+      if (item.type === 'venta')     await sbInsert('pdv_ventas', item.data);
+      if (item.type === 'caja')      await sbInsert('pdv_cajas', item.data);
+      if (item.type === 'anular')    await sbPatch('pdv_ventas', `serie=eq.${item.serie}`, { anulada: true });
+      if (item.type === 'cierre')    await sbPatch('pdv_cajas', `id=eq.${item.id}`, item.data);
+    } catch(e) { failed.push(item); }
+  }
+  saveQueue(failed);
+  setSyncDots(failed.length > 0 ? 'offline' : 'online');
+}
+
+async function supaOp(type, data, extra={}) {
+  const item = { type, data, ...extra };
+  if (isOnline) {
+    setSyncDots('syncing');
+    try {
+      if (type === 'venta')  await sbInsert('pdv_ventas', data);
+      if (type === 'caja')   await sbInsert('pdv_cajas', data);
+      if (type === 'anular') await sbPatch('pdv_ventas', `serie=eq.${extra.serie}`, { anulada: true });
+      if (type === 'cierre') await sbPatch('pdv_cajas', `id=eq.${extra.id}`, data);
+      setSyncDots('online');
+    } catch(e) {
+      const q = getQueue(); q.push(item); saveQueue(q);
+      setSyncDots('offline');
+    }
+  } else {
+    const q = getQueue(); q.push(item); saveQueue(q);
+  }
+}
+
+// ══════════════════════════════════════════════
+// APERTURA DE CAJA
+// ══════════════════════════════════════════════
+async function abrirCaja() {
+  const operador = document.getElementById('apOperador').value.trim() || 'Cajero';
+  const fondo = parseFloat(document.getElementById('apFondo').value) || 0;
+
+  const caja = {
+    id:            uuid(),
+    fecha:         todayKey(),
+    apertura_at:   new Date().toISOString(),
+    operador,
+    fondo_inicial: fondo,
+    estado:        'abierta'
+  };
+
+  saveState(caja);
+  saveVentas([]); // limpia ventas locales de la sesión anterior
+
+  await supaOp('caja', caja);
+  showToast('✅ Caja abierta');
+  initVentaScreen(caja);
+  goScreen('screenVenta');
+}
+
+// ══════════════════════════════════════════════
+// PANTALLA DE VENTA
+// ══════════════════════════════════════════════
+let vtInput = '';
+
+function initVentaScreen(caja) {
+  document.getElementById('vtOperadorLabel').textContent = caja.operador + ' · ' + fmtDate(caja.fecha);
+  resetVenta();
+  renderVentaList();
+}
+
+function resetVenta() {
+  vtInput = '';
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const qty = parseInt(vtInput) || 0;
+  const total = qty * PRECIO_UNIT;
+  document.getElementById('vtQty').textContent = qty;
+  document.getElementById('vtTotal').textContent = fmtMoney(total);
+}
+
+// Numpad
+document.querySelectorAll('.nk[data-n]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const n = btn.dataset.n;
+    if (n === 'del') {
+      vtInput = vtInput.slice(0, -1);
+    } else if (n !== 'ok') {
+      if (vtInput.length >= 4) return; // max 9999
+      vtInput += n;
+      if (vtInput.startsWith('0')) vtInput = vtInput.replace(/^0+/, '') || '0';
+    }
+    updateDisplay();
+  });
+});
+
+function irCobro() {
+  const qty = parseInt(vtInput) || 0;
+  if (qty === 0) { showToast('⚠️ Ingresa la cantidad'); return; }
+  const total = qty * PRECIO_UNIT;
+  const serie = nextSerie();
+
+  document.getElementById('cobroSerie').textContent = 'Serie: ' + serie;
+  document.getElementById('cobroCantLabel').textContent = qty + ' empanadas × $1.00';
+  document.getElementById('cobroTotal').textContent = fmtMoney(total);
+  document.getElementById('pagoInput').value = '';
+  document.getElementById('cambioBox').style.display = 'none';
+
+  // Quick pay buttons: exacto, billetes comunes
+  const qp = document.getElementById('quickPay');
+  qp.innerHTML = '';
+  const opts = [total, Math.ceil(total/5)*5, Math.ceil(total/10)*10, Math.ceil(total/20)*20]
+    .filter((v,i,a) => a.indexOf(v) === i && v >= total).slice(0,4);
+  opts.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-gray btn-sm';
+    b.textContent = fmtMoney(v);
+    b.onclick = () => { document.getElementById('pagoInput').value = v.toFixed(2); calcCambio(); };
+    qp.appendChild(b);
+  });
+
+  // Guardar referencia temporal
+  window._cobro = { qty, total, serie };
+  goScreen('screenCobro');
+}
+
+// Cambio en tiempo real
+window.calcCambio = function() {
+  const total = window._cobro?.total || 0;
+  const pago = parseFloat(document.getElementById('pagoInput').value) || 0;
+  const cambio = pago - total;
+  const box = document.getElementById('cambioBox');
+  if (pago >= total) {
+    box.style.display = 'flex';
+    document.getElementById('cambioVal').textContent = fmtMoney(Math.max(cambio, 0));
+  } else {
+    box.style.display = 'none';
+  }
+};
+
+let metodoActual = 'efectivo';
+window.selMetodo = function(btn) {
+  document.querySelectorAll('.metodo-btn').forEach(b => b.style.background = '');
+  btn.style.background = '#d1fae5';
+  metodoActual = btn.dataset.m;
+};
+
+// ══════════════════════════════════════════════
+// CONFIRMAR VENTA
+// ══════════════════════════════════════════════
+window.confirmarVenta = async function() {
+  const { qty, total, serie } = window._cobro || {};
+  if (!qty) return;
+  const pago = parseFloat(document.getElementById('pagoInput').value) || 0;
+  if (pago < total) { showToast('⚠️ Monto insuficiente'); return; }
+
+  const cambio = parseFloat((pago - total).toFixed(2));
+  const caja = getState();
+  const fecha = todayKey();
+  const hora = nowTime();
+
+  const venta = {
+    serie, fecha, hora,
+    operador: caja?.operador || 'cajero',
+    cantidad: qty,
+    precio_unit: PRECIO_UNIT,
+    total,
+    pago_recibido: pago,
+    cambio,
+    metodo_pago: metodoActual,
+    caja_id: caja?.id || 'offline',
+    anulada: false
+  };
+
+  // Guarda local
+  const ventas = getVentas();
+  ventas.unshift(venta);
+  saveVentas(ventas);
+
+  // Supabase async
+  await supaOp('venta', venta);
+
+  // Mostrar recibo
+  showRecibo(venta);
+  renderVentaList();
+};
+
+// ══════════════════════════════════════════════
+// RECIBO
+// ══════════════════════════════════════════════
+function showRecibo(v) {
+  document.getElementById('reciboSerieLbl').textContent = v.serie;
+  document.getElementById('rSerie').textContent = v.serie;
+  document.getElementById('rFecha').textContent = fmtDate(v.fecha);
+  document.getElementById('rHora').textContent = v.hora;
+  document.getElementById('rOperador').textContent = v.operador;
+  document.getElementById('rProducto').textContent = `Empanadas ×${v.cantidad}`;
+  document.getElementById('rSubtotal').textContent = fmtMoney(v.total);
+  document.getElementById('rTotal').textContent = fmtMoney(v.total);
+  document.getElementById('rPago').textContent = fmtMoney(v.pago_recibido);
+  document.getElementById('rCambio').textContent = fmtMoney(v.cambio);
+  document.getElementById('rMetodo').textContent = v.metodo_pago.charAt(0).toUpperCase() + v.metodo_pago.slice(1);
+  window._lastRecibo = v;
+  goScreen('screenRecibo');
+}
+
+window.imprimirRecibo = function() { window.print(); };
+
+window.compartirRecibo = async function() {
+  const v = window._lastRecibo;
+  if (!v) return;
+  const texto = [
+    '🫓 EMPANADAS',
+    'Carora · Venezuela',
+    '────────────────────',
+    `Serie:    ${v.serie}`,
+    `Fecha:    ${fmtDate(v.fecha)}  ${v.hora}`,
+    `Operador: ${v.operador}`,
+    '────────────────────',
+    `Empanadas ×${v.cantidad}   ${fmtMoney(v.total)}`,
+    '────────────────────',
+    `TOTAL:    ${fmtMoney(v.total)}`,
+    `Pagó:     ${fmtMoney(v.pago_recibido)}`,
+    `Cambio:   ${fmtMoney(v.cambio)}`,
+    `Método:   ${v.metodo_pago}`,
+    '────────────────────',
+    '¡Gracias por su compra! 🫓'
+  ].join('\n');
+
+  if (navigator.share) {
+    try { await navigator.share({ title: `Recibo ${v.serie}`, text: texto }); }
+    catch(e) { copyText(texto); }
+  } else { copyText(texto); }
+};
+
+function copyText(t) {
+  navigator.clipboard?.writeText(t).then(() => showToast('📋 Recibo copiado')).catch(() => showToast('⚠️ No se pudo copiar'));
+}
+
+// ══════════════════════════════════════════════
+// LISTA DE VENTAS EN PANTALLA PDV
+// ══════════════════════════════════════════════
+function renderVentaList() {
+  const ventas = getVentas().filter(v => v.fecha === todayKey());
+  const list = document.getElementById('vtList');
+  const validas = ventas.filter(v => !v.anulada);
+  const totalDia = validas.reduce((s,v) => s + v.total, 0);
+  document.getElementById('vtContador').textContent = `${validas.length} venta${validas.length!==1?'s':''} · ${fmtMoney(totalDia)}`;
+
+  if (!ventas.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:12px 0">Sin ventas aún</div>';
+    return;
+  }
+  list.innerHTML = ventas.slice(0,10).map(v => `
+    <div class="venta-pill ${v.anulada?'':''}">
+      <span class="vp-serie ${v.anulada?'':''}">
+        ${v.anulada?'<s>':''}${v.serie}${v.anulada?'</s>':''}
+      </span>
+      <span class="vp-info">${v.hora?.slice(0,5)||''} · ×${v.cantidad}</span>
+      <span class="vp-total ${v.anulada?'':''}">
+        ${v.anulada?'<s>':''}${fmtMoney(v.total)}${v.anulada?'</s> ❌':''}
+      </span>
+      ${!v.anulada ? `<button class="btn-anular" onclick="anularVenta('${v.serie}')">Anular</button>` : ''}
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+// ANULAR VENTA
+// ══════════════════════════════════════════════
+window.anularVenta = async function(serie) {
+  if (!confirm(`¿Anular venta ${serie}?`)) return;
+  const ventas = getVentas();
+  const idx = ventas.findIndex(v => v.serie === serie);
+  if (idx < 0) return;
+  ventas[idx].anulada = true;
+  saveVentas(ventas);
+  await supaOp('anular', {}, { serie });
+  renderVentaList();
+  showToast(`❌ Venta ${serie} anulada`);
+};
+
+// ══════════════════════════════════════════════
+// CIERRE DE CAJA
+// ══════════════════════════════════════════════
+function irCierre() {
+  const caja = getState();
+  if (!caja) { goScreen('screenApertura'); return; }
+  const ventas = getVentas().filter(v => v.fecha === todayKey());
+  const validas = ventas.filter(v => !v.anulada);
+  const anuladas = ventas.filter(v => v.anulada);
+  const totalCobrado = validas.reduce((s,v) => s + v.total, 0);
+
+  document.getElementById('cierreOperadorLbl').textContent = caja.operador;
+  document.getElementById('zApertura').textContent = caja.apertura_at ? new Date(caja.apertura_at).toLocaleTimeString('es') : '—';
+  document.getElementById('zOperador').textContent = caja.operador;
+  document.getElementById('zFondo').textContent = fmtMoney(caja.fondo_inicial);
+  document.getElementById('zTotalVentas').textContent = validas.length + ' ventas';
+  document.getElementById('zAnuladas').textContent = anuladas.length;
+  document.getElementById('zTotalCobrado').textContent = fmtMoney(totalCobrado);
+
+  // Detalle
+  const det = document.getElementById('zDetalle');
+  if (!ventas.length) {
+    det.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>';
+  } else {
+    det.innerHTML = ventas.map(v => `
+      <div class="zrow ${v.anulada?'zrow-anulada':''}">
+        <span class="zrow-serie">${v.serie}</span>
+        <span style="color:var(--text3);font-size:11px">${v.hora?.slice(0,5)||''} · ×${v.cantidad} · ${v.metodo_pago}</span>
+        <span style="font-weight:700">${v.anulada?'❌ ':''} ${fmtMoney(v.total)}</span>
+      </div>
+    `).join('');
+  }
+
+  goScreen('screenCierre');
+}
+
+window.confirmarCierre = async function() {
+  if (!confirm('¿Cerrar la caja? Esta acción no se puede deshacer.')) return;
+  const caja = getState();
+  if (!caja) return;
+  const ventas = getVentas().filter(v => v.fecha === todayKey());
+  const validas = ventas.filter(v => !v.anulada);
+  const totalCobrado = validas.reduce((s,v) => s + v.total, 0);
+
+  const cierre = {
+    cierre_at: new Date().toISOString(),
+    total_ventas: validas.length,
+    total_cobrado: totalCobrado,
+    estado: 'cerrada'
+  };
+
+  await supaOp('cierre', cierre, { id: caja.id });
+
+  // Limpiar estado local
+  localStorage.removeItem('pdv_state');
+  localStorage.removeItem('pdv_ventas_local');
+  showToast('🔒 Caja cerrada — hasta mañana!', 3000);
+  setTimeout(() => goScreen('screenApertura'), 1500);
+};
+
+window.imprimirZReport = function() { window.print(); };
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init() {
+  // Fecha en apertura
+  document.getElementById('apFecha').textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Sync de red
+  window.addEventListener('online',  async () => { isOnline=true;  setSyncDots('online');  await syncQueue(); });
+  window.addEventListener('offline', ()         => { isOnline=false; setSyncDots('offline'); });
+  setSyncDots(isOnline ? 'online' : 'offline');
+
+  // Si hay caja abierta hoy, ir directo al PDV
+  const caja = getState();
+  if (caja && caja.fecha === todayKey() && caja.estado === 'abierta') {
+    initVentaScreen(caja);
+    goScreen('screenVenta');
+  }
+
+  // Sync queue pendiente
+  if (isOnline) syncQueue();
+}
+
+init();
+</script>
+</body>
+</html>
