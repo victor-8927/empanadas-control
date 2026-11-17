@@ -161,6 +161,23 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 
 .btn-sync{background:none;border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .btn-sync:active{background:rgba(255,255,255,.1)}
+
+/* ══ PDV ══ */
+.pdv-nk{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;font-size:22px;font-weight:700;color:var(--text);padding:16px 8px;cursor:pointer;transition:transform .08s,background .15s;-webkit-tap-highlight-color:transparent;user-select:none}
+.pdv-nk:active{transform:scale(.92);background:#e5e7eb}
+.pdv-nk-zero{grid-column:span 1}
+.pdv-nk-del{background:#fef2f2;color:var(--red);border-color:#fecaca}
+.pdv-nk-del:active{background:#fecaca}
+.pdv-nk-ok{background:var(--green);color:#fff;border-color:var(--green);font-size:14px;padding:16px 6px}
+.pdv-nk-ok:active{background:#047857}
+.pdv-venta-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:#f9fafb;border-radius:10px;font-size:12px}
+.pdv-venta-item.anulada{opacity:.45;text-decoration:line-through}
+.pdv-anular-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:2px 6px;border-radius:6px;color:var(--red)}
+.pdv-anular-btn:active{background:#fef2f2}
+.pdv-metodo.active-metodo{background:var(--green-dark)!important}
+.pdv-cambio-box{background:#ecfdf5;border:1px solid #d1fae5;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.pdv-z-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:#f9fafb;border-radius:9px;font-size:12px;margin-bottom:4px}
+@media print{.header,.nav-tabs,#pdv-screen-venta>div:first-child,#pdvNumpad,.btn-save,.btn-calc,.pdv-anular-btn{display:none!important}.tab-content:not(#tab-pdv){display:none!important}#tab-pdv{display:block!important}#pdv-screen-recibo{display:block!important}}
 </style>
 </head>
 <body>
@@ -178,6 +195,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
     <button class="nav-tab active" onclick="setTab('hoy',this)">HOY</button>
     <button class="nav-tab" onclick="setTab('historial',this)">HISTORIAL</button>
     <button class="nav-tab" onclick="setTab('resumen',this)">RESUMEN</button>
+    <button class="nav-tab" onclick="setTab('pdv',this)" id="tabPDV">PDV 🛒</button>
   </nav>
 </div>
 
@@ -318,6 +336,183 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
       </div>
     </div>
   </div>
+
+  <!-- ══════════════════════════════════════════════
+       TAB PDV — Punto de Venta
+  ══════════════════════════════════════════════ -->
+  <div class="tab-content" id="tab-pdv">
+
+    <!-- SCREEN: APERTURA -->
+    <div id="pdv-screen-apertura">
+      <div style="text-align:center;padding:24px 0 12px">
+        <div style="font-size:48px">🏪</div>
+        <div style="font-size:18px;font-weight:800;margin-top:8px">Apertura de Caja</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:4px" id="pdvApFecha">—</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Datos de Apertura</div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">
+          <label class="input-label">Operador / Cajero</label>
+          <input class="input-field" id="pdvOperador" type="text" placeholder="Nombre del operador" value="Cajero" style="font-size:16px;padding:11px 14px">
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <label class="input-label">Fondo Inicial ($)</label>
+          <input class="input-field" id="pdvFondo" type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="font-size:16px;padding:11px 14px">
+        </div>
+      </div>
+      <button class="btn-save" onclick="pdvAbrirCaja()">✅ Abrir Caja</button>
+    </div>
+
+    <!-- SCREEN: VENTA -->
+    <div id="pdv-screen-venta" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text3)" id="pdvVtOperador">Cajero</div>
+        </div>
+        <button class="btn-calc" onclick="pdvIrCierre()" style="background:#991b1b">Cerrar Caja 🔒</button>
+      </div>
+
+      <!-- Display cantidad + total -->
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="text-align:center;padding:20px 16px 10px">
+          <div style="font-size:64px;font-weight:900;color:var(--green);line-height:1" id="pdvQtyDisplay">0</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:3px">empanadas</div>
+          <div style="font-size:40px;font-weight:900;color:var(--text);margin-top:10px" id="pdvTotalDisplay">$0.00</div>
+          <div style="font-size:11px;color:var(--text3)">TOTAL</div>
+        </div>
+        <!-- Numpad -->
+        <div style="padding:0 14px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="pdvNumpad">
+          <button class="pdv-nk" data-n="1">1</button>
+          <button class="pdv-nk" data-n="2">2</button>
+          <button class="pdv-nk" data-n="3">3</button>
+          <button class="pdv-nk" data-n="4">4</button>
+          <button class="pdv-nk" data-n="5">5</button>
+          <button class="pdv-nk" data-n="6">6</button>
+          <button class="pdv-nk" data-n="7">7</button>
+          <button class="pdv-nk" data-n="8">8</button>
+          <button class="pdv-nk" data-n="9">9</button>
+          <button class="pdv-nk pdv-nk-zero" data-n="0">0</button>
+          <button class="pdv-nk pdv-nk-del" data-n="del">⌫</button>
+          <button class="pdv-nk pdv-nk-ok" onclick="pdvIrCobro()">COBRAR →</button>
+        </div>
+      </div>
+
+      <!-- Mini lista ventas del día -->
+      <div class="card" style="margin-top:12px">
+        <div class="card-title" style="display:flex;justify-content:space-between">
+          <span>Ventas del día</span>
+          <span id="pdvContador" style="color:var(--green);font-weight:800;font-size:13px">0 · $0.00</span>
+        </div>
+        <div id="pdvVtList" style="display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto">
+          <div style="text-align:center;color:var(--text3);font-size:13px;padding:10px">Sin ventas aún</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: COBRO -->
+    <div id="pdv-screen-cobro" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--green)" id="pdvCobroSerie">Serie: —</div>
+        <button class="btn-calc" onclick="pdvGoScreen('venta')" style="background:#374151">← Cancelar</button>
+      </div>
+
+      <div class="card" style="text-align:center;padding:20px 16px">
+        <div style="font-size:14px;color:var(--text3)" id="pdvCobroCant">0 empanadas</div>
+        <div style="font-size:44px;font-weight:900;color:var(--green);margin-top:4px" id="pdvCobroTotal">$0.00</div>
+        <div style="font-size:12px;color:var(--text3)">TOTAL A COBRAR</div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Monto recibido</div>
+        <input class="input-field" id="pdvPagoInput" type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="font-size:28px;font-weight:800;text-align:center" oninput="pdvCalcCambio()">
+        <div id="pdvCambioBox" style="display:none;background:#ecfdf5;border:1px solid #d1fae5;border-radius:12px;padding:12px 16px;display:none;justify-content:space-between;align-items:center;margin-top:8px">
+          <span style="font-size:13px;color:var(--green);font-weight:700">💰 Cambio</span>
+          <span style="font-size:22px;font-weight:900;color:var(--green)" id="pdvCambioVal">$0.00</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Cobro rápido</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="pdvQuickPay"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Método de Pago</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-calc pdv-metodo active-metodo" data-m="efectivo" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px">💵 Efectivo</button>
+          <button class="btn-calc pdv-metodo" data-m="transferencia" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px;background:#374151">📲 Transfer.</button>
+          <button class="btn-calc pdv-metodo" data-m="otro" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px;background:#374151">Otro</button>
+        </div>
+      </div>
+
+      <button class="btn-save" onclick="pdvConfirmarVenta()">✅ Confirmar Venta</button>
+    </div>
+
+    <!-- SCREEN: RECIBO -->
+    <div id="pdv-screen-recibo" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--green)" id="pdvReciboSerieLbl">—</div>
+        <button class="btn-calc" onclick="pdvGoScreen('venta');pdvResetVenta()">Nueva Venta →</button>
+      </div>
+
+      <div id="pdvReceiptBlock" style="background:#fff;border-radius:16px;padding:20px;font-family:'Courier New',Courier,monospace;border:1px solid var(--border);max-width:320px;margin:0 auto">
+        <div style="text-align:center;border-bottom:2px dashed var(--border);padding-bottom:12px;margin-bottom:12px">
+          <div style="font-size:20px;font-weight:900;letter-spacing:2px">🫓 EMPANADAS</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">Carora · Venezuela</div>
+          <div style="font-size:14px;font-weight:700;margin-top:8px;background:#ecfdf5;color:var(--green);padding:4px 12px;border-radius:6px;display:inline-block" id="pdvRSerie">11-0001</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Fecha</span><span id="pdvRFecha">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Hora</span><span id="pdvRHora">—</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Operador</span><span id="pdvROperador">—</span></div>
+        <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span id="pdvRProducto">Empanadas ×0</span><span id="pdvRSubtotal">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid var(--border);padding-top:8px;margin-top:4px"><span>TOTAL</span><span id="pdvRTotal">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Pagó</span><span id="pdvRPago">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--green);font-weight:700"><span>Cambio</span><span id="pdvRCambio">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Método</span><span id="pdvRMetodo">Efectivo</span></div>
+        <div style="text-align:center;border-top:2px dashed var(--border);padding-top:12px;margin-top:12px;font-size:11px;color:var(--text3)">¡Gracias por su compra!<br>Vuelva pronto 🫓</div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-calc" style="flex:1;padding:12px" onclick="window.print()">🖨️ Imprimir</button>
+        <button class="btn-calc" style="flex:1;padding:12px;background:var(--green-dark)" onclick="pdvCompartir()">📲 Compartir</button>
+      </div>
+    </div>
+
+    <!-- SCREEN: CIERRE Z-REPORT -->
+    <div id="pdv-screen-cierre" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:800">📊 Cierre de Caja</div>
+        <button class="btn-calc" onclick="pdvGoScreen('venta')" style="background:#374151">← Volver</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resumen del Día</div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Apertura</span><span id="pdvZApertura">—</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Operador</span><span id="pdvZOperador">—</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Fondo inicial</span><span id="pdvZFondo">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Total ventas</span><span id="pdvZTotalVentas" style="font-weight:800">0</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px"><span>Ventas anuladas</span><span id="pdvZAnuladas" style="color:var(--red)">0</span></div>
+        <div style="background:var(--green-dark);color:#fff;border-radius:12px;padding:14px 16px;text-align:center;margin-top:12px">
+          <div style="font-size:12px;opacity:.8">TOTAL COBRADO</div>
+          <div style="font-size:30px;font-weight:900;margin-top:2px" id="pdvZTotalCobrado">$0.00</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Detalle de Ventas</div>
+        <div id="pdvZDetalle" style="display:flex;flex-direction:column;gap:4px">
+          <div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn-calc" style="flex:1;padding:12px" onclick="window.print()">🖨️ Imprimir Z</button>
+        <button class="btn-save" style="flex:1;background:#991b1b;border-radius:12px" onclick="pdvConfirmarCierre()">🔒 Cerrar Caja</button>
+      </div>
+    </div>
+
+  </div><!-- /tab-pdv -->
 
 </main>
 
@@ -773,7 +968,345 @@ window.setTab = function(tab, el) {
   if (el) el.classList.add('active');
   if (tab === 'historial') renderHistorial();
   if (tab === 'resumen') renderResumen();
+  if (tab === 'pdv') pdvInit();
 };
+
+// ============================================================
+// PDV — Punto de Venta
+// ============================================================
+const PRECIO_UNIT = 1.00;
+const PDV_SH = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+async function pdvSbInsert(table, row) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: PDV_SH, body: JSON.stringify(row) });
+    return r.ok ? await r.json() : null;
+  } catch { return null; }
+}
+async function pdvSbPatch(table, filter, body) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/${table}?${filter}`, { method: 'PATCH', headers: PDV_SH, body: JSON.stringify(body) });
+    return r.ok;
+  } catch { return false; }
+}
+
+function pdvGetState()  { return JSON.parse(localStorage.getItem('pdv_state')   || 'null'); }
+function pdvSaveState(s){ localStorage.setItem('pdv_state', JSON.stringify(s)); }
+function pdvGetVentas() { return JSON.parse(localStorage.getItem('pdv_ventas_local') || '[]'); }
+function pdvSaveVentas(v){ localStorage.setItem('pdv_ventas_local', JSON.stringify(v)); }
+function pdvGetQueue()  { return JSON.parse(localStorage.getItem('pdv_queue') || '[]'); }
+function pdvSaveQueue(q){ localStorage.setItem('pdv_queue', JSON.stringify(q)); }
+
+function pdvNextSerie() {
+  const mes = String(new Date().getMonth()+1).padStart(2,'0');
+  const prefix = mes + '-';
+  let maxN = 0;
+  for (const v of pdvGetVentas()) {
+    if (v.serie && v.serie.startsWith(prefix)) {
+      const n = parseInt(v.serie.slice(3)) || 0;
+      if (n > maxN) maxN = n;
+    }
+  }
+  return prefix + String(maxN + 1).padStart(4, '0');
+}
+
+let pdvQty = 0;
+let pdvMetodo = 'efectivo';
+
+function pdvGoScreen(id) {
+  ['apertura','venta','cobro','recibo','cierre'].forEach(s => {
+    const el = document.getElementById('pdv-screen-' + s);
+    if (el) el.style.display = s === id ? '' : 'none';
+  });
+}
+
+function pdvInit() {
+  // Atualiza data na apertura
+  const fechaEl = document.getElementById('pdvApFecha');
+  if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  // Setup numpad
+  document.querySelectorAll('.pdv-nk[data-n]').forEach(btn => {
+    btn.onclick = () => pdvNumpadPress(btn.dataset.n);
+  });
+
+  const st = pdvGetState();
+  const hoy = new Date().toISOString().slice(0,10);
+  if (st && st.fecha === hoy && st.estado === 'abierta') {
+    // Caja já aberta hoje — vai direto pra venta
+    pdvGoScreen('venta');
+    document.getElementById('pdvVtOperador').textContent = st.operador;
+    pdvRenderVentaList();
+  } else {
+    pdvGoScreen('apertura');
+  }
+}
+
+function pdvNumpadPress(n) {
+  if (n === 'del') { pdvQty = Math.floor(pdvQty / 10); }
+  else if (n === '0') { if (pdvQty > 0) pdvQty = pdvQty * 10; }
+  else { const v = pdvQty * 10 + parseInt(n); pdvQty = v > 999 ? 999 : v; }
+  document.getElementById('pdvQtyDisplay').textContent = pdvQty;
+  document.getElementById('pdvTotalDisplay').textContent = '$' + (pdvQty * PRECIO_UNIT).toFixed(2);
+}
+
+function pdvResetVenta() {
+  pdvQty = 0;
+  document.getElementById('pdvQtyDisplay').textContent = '0';
+  document.getElementById('pdvTotalDisplay').textContent = '$0.00';
+}
+
+async function pdvAbrirCaja() {
+  const operador = document.getElementById('pdvOperador').value.trim() || 'Cajero';
+  const fondo = parseFloat(document.getElementById('pdvFondo').value) || 0;
+  const hoy = new Date().toISOString().slice(0,10);
+  const ahora = new Date().toTimeString().slice(0,5);
+  const cajaId = `caja_${hoy}_${Date.now()}`;
+
+  const st = { cajaId, fecha: hoy, operador, fondo_inicial: fondo, apertura_at: ahora, estado: 'abierta' };
+  pdvSaveState(st);
+
+  // Limpa vendas do dia anterior se houver
+  const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
+  pdvSaveVentas(ventas);
+
+  // Supabase
+  if (isOnline) {
+    pdvSbInsert('pdv_cajas', { id: cajaId, fecha: hoy, apertura_at: `${hoy}T${ahora}:00`, operador, fondo_inicial: fondo, estado: 'abierta', total_ventas: 0, total_cobrado: 0 });
+  } else {
+    const q = pdvGetQueue();
+    q.push({ type: 'pdv_caja_abrir', data: { id: cajaId, fecha: hoy, apertura_at: `${hoy}T${ahora}:00`, operador, fondo_inicial: fondo, estado: 'abierta', total_ventas: 0, total_cobrado: 0 } });
+    pdvSaveQueue(q);
+  }
+
+  document.getElementById('pdvVtOperador').textContent = operador;
+  pdvGoScreen('venta');
+  pdvRenderVentaList();
+  showToast('✅ Caja abierta');
+}
+
+function pdvIrCobro() {
+  if (pdvQty <= 0) { showToast('⚠️ Ingresa una cantidad'); return; }
+  const serie = pdvNextSerie();
+  const total = pdvQty * PRECIO_UNIT;
+  document.getElementById('pdvCobroSerie').textContent = `Serie: ${serie}`;
+  document.getElementById('pdvCobroCant').textContent = `${pdvQty} empanada${pdvQty > 1 ? 's' : ''}`;
+  document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}`;
+  document.getElementById('pdvPagoInput').value = '';
+  document.getElementById('pdvCambioBox').style.display = 'none';
+
+  // Quick pay buttons
+  const qp = document.getElementById('pdvQuickPay');
+  qp.innerHTML = '';
+  [total, Math.ceil(total), 5, 10, 20].filter((v,i,a) => a.indexOf(v)===i && v >= total).slice(0,4).forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'btn-calc';
+    b.style.cssText = 'flex:1;min-width:60px;padding:9px;font-size:13px;background:#374151';
+    b.textContent = `$${v.toFixed(2)}`;
+    b.onclick = () => { document.getElementById('pdvPagoInput').value = v.toFixed(2); pdvCalcCambio(); };
+    qp.appendChild(b);
+  });
+
+  // Reset método
+  document.querySelectorAll('.pdv-metodo').forEach(b => {
+    b.classList.toggle('active-metodo', b.dataset.m === 'efectivo');
+    b.style.background = b.dataset.m === 'efectivo' ? '' : '#374151';
+  });
+  pdvMetodo = 'efectivo';
+
+  // Guarda em sessionStorage para confirmarVenta
+  sessionStorage.setItem('pdv_pending', JSON.stringify({ serie, qty: pdvQty, total }));
+  pdvGoScreen('cobro');
+}
+
+window.pdvCalcCambio = function() {
+  const pago = parseFloat(document.getElementById('pdvPagoInput').value) || 0;
+  const pending = JSON.parse(sessionStorage.getItem('pdv_pending') || '{}');
+  const total = pending.total || 0;
+  const cambio = pago - total;
+  const box = document.getElementById('pdvCambioBox');
+  if (pago >= total && pago > 0) {
+    box.style.display = 'flex';
+    document.getElementById('pdvCambioVal').textContent = `$${cambio.toFixed(2)}`;
+  } else {
+    box.style.display = 'none';
+  }
+};
+
+window.pdvSelMetodo = function(btn) {
+  document.querySelectorAll('.pdv-metodo').forEach(b => { b.classList.remove('active-metodo'); b.style.background = '#374151'; });
+  btn.classList.add('active-metodo');
+  btn.style.background = '';
+  pdvMetodo = btn.dataset.m;
+};
+
+async function pdvConfirmarVenta() {
+  const pago = parseFloat(document.getElementById('pdvPagoInput').value) || 0;
+  const pending = JSON.parse(sessionStorage.getItem('pdv_pending') || '{}');
+  if (!pending.serie) { showToast('⚠️ Error: recarga y vuelve a intentar'); return; }
+  if (pago < pending.total) { showToast('⚠️ Monto insuficiente'); return; }
+
+  const cambio = pago - pending.total;
+  const hoy = new Date().toISOString().slice(0,10);
+  const ahora = new Date().toTimeString().slice(0,5);
+  const st = pdvGetState();
+
+  const venta = {
+    serie: pending.serie, fecha: hoy, hora: ahora,
+    operador: st?.operador || 'Cajero',
+    cantidad: pending.qty, precio_unit: PRECIO_UNIT, total: pending.total,
+    pago_recibido: pago, cambio, metodo_pago: pdvMetodo,
+    caja_id: st?.cajaId || null, anulada: false
+  };
+
+  // Salva local
+  const ventas = pdvGetVentas();
+  ventas.unshift(venta);
+  pdvSaveVentas(ventas);
+
+  // Supabase
+  if (isOnline) {
+    pdvSbInsert('pdv_ventas', venta);
+  } else {
+    const q = pdvGetQueue();
+    q.push({ type: 'pdv_venta', data: venta });
+    pdvSaveQueue(q);
+  }
+
+  // Recibo
+  document.getElementById('pdvReciboSerieLbl').textContent = pending.serie;
+  document.getElementById('pdvRSerie').textContent = pending.serie;
+  document.getElementById('pdvRFecha').textContent = hoy;
+  document.getElementById('pdvRHora').textContent = ahora;
+  document.getElementById('pdvROperador').textContent = st?.operador || 'Cajero';
+  document.getElementById('pdvRProducto').textContent = `Empanadas ×${pending.qty}`;
+  document.getElementById('pdvRSubtotal').textContent = `$${pending.total.toFixed(2)}`;
+  document.getElementById('pdvRTotal').textContent = `$${pending.total.toFixed(2)}`;
+  document.getElementById('pdvRPago').textContent = `$${pago.toFixed(2)}`;
+  document.getElementById('pdvRCambio').textContent = `$${cambio.toFixed(2)}`;
+  document.getElementById('pdvRMetodo').textContent = { efectivo:'Efectivo', transferencia:'Transferencia', otro:'Otro' }[pdvMetodo] || pdvMetodo;
+
+  pdvRenderVentaList();
+  pdvGoScreen('recibo');
+  showToast(`✅ Venta registrada · ${pending.serie}`);
+}
+
+window.pdvCompartir = async function() {
+  const txt = document.getElementById('pdvReceiptBlock').innerText;
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Recibo Empanadas', text: txt }); return; } catch {}
+  }
+  try { await navigator.clipboard.writeText(txt); showToast('📋 Recibo copiado'); } catch {}
+};
+
+window.pdvAnularVenta = function(serie) {
+  const ventas = pdvGetVentas();
+  const v = ventas.find(x => x.serie === serie);
+  if (!v) return;
+  v.anulada = true;
+  pdvSaveVentas(ventas);
+  if (isOnline) pdvSbPatch('pdv_ventas', `serie=eq.${serie}`, { anulada: true });
+  pdvRenderVentaList();
+  showToast(`🚫 Venta ${serie} anulada`);
+};
+
+function pdvRenderVentaList() {
+  const list = document.getElementById('pdvVtList');
+  const hoy = new Date().toISOString().slice(0,10);
+  const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
+  if (!ventas.length) { list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:10px">Sin ventas aún</div>'; }
+  else {
+    list.innerHTML = ventas.map(v => `
+      <div class="pdv-venta-item${v.anulada?' anulada':''}">
+        <span style="font-weight:700;color:var(--green-dark)">${v.serie}</span>
+        <span>${v.cantidad} emp · <b>$${v.total.toFixed(2)}</b></span>
+        <span style="color:var(--text3)">${v.hora}</span>
+        ${!v.anulada ? `<button class="pdv-anular-btn" onclick="pdvAnularVenta('${v.serie}')">🚫</button>` : '<span style="color:var(--red);font-size:11px">Anulada</span>'}
+      </div>`).join('');
+  }
+  // Contador
+  const activas = ventas.filter(v => !v.anulada);
+  const totalCobrado = activas.reduce((s,v) => s + v.total, 0);
+  document.getElementById('pdvContador').textContent = `${activas.length} · $${totalCobrado.toFixed(2)}`;
+}
+
+window.pdvIrCierre = function() {
+  const hoy = new Date().toISOString().slice(0,10);
+  const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
+  const activas = ventas.filter(v => !v.anulada);
+  const anuladas = ventas.filter(v => v.anulada);
+  const totalCobrado = activas.reduce((s,v) => s + v.total, 0);
+  const st = pdvGetState();
+
+  document.getElementById('pdvZApertura').textContent = st?.apertura_at || '—';
+  document.getElementById('pdvZOperador').textContent = st?.operador || '—';
+  document.getElementById('pdvZFondo').textContent = `$${(st?.fondo_inicial || 0).toFixed(2)}`;
+  document.getElementById('pdvZTotalVentas').textContent = activas.length;
+  document.getElementById('pdvZAnuladas').textContent = anuladas.length;
+  document.getElementById('pdvZTotalCobrado').textContent = `$${totalCobrado.toFixed(2)}`;
+
+  const det = document.getElementById('pdvZDetalle');
+  det.innerHTML = activas.length ? activas.map(v => `
+    <div class="pdv-z-row">
+      <span style="font-weight:700;color:var(--green-dark)">${v.serie}</span>
+      <span>${v.cantidad} emp</span>
+      <span style="font-weight:700">$${v.total.toFixed(2)}</span>
+      <span style="color:var(--text3);font-size:11px">${v.hora}</span>
+    </div>`).join('') : '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>';
+
+  pdvGoScreen('cierre');
+};
+
+async function pdvConfirmarCierre() {
+  const hoy = new Date().toISOString().slice(0,10);
+  const ahora = new Date().toTimeString().slice(0,5);
+  const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
+  const activas = ventas.filter(v => !v.anulada);
+  const totalCobrado = activas.reduce((s,v) => s + v.total, 0);
+  const st = pdvGetState();
+
+  if (st) {
+    const updatedSt = { ...st, estado: 'cerrada', cierre_at: ahora };
+    pdvSaveState(updatedSt);
+    if (isOnline) {
+      pdvSbPatch('pdv_cajas', `id=eq.${st.cajaId}`, { estado: 'cerrada', cierre_at: `${hoy}T${ahora}:00`, total_ventas: activas.length, total_cobrado: totalCobrado });
+    } else {
+      const q = pdvGetQueue();
+      q.push({ type: 'pdv_caja_cerrar', data: { id: st.cajaId, estado: 'cerrada', cierre_at: `${hoy}T${ahora}:00`, total_ventas: activas.length, total_cobrado: totalCobrado } });
+      pdvSaveQueue(q);
+    }
+  }
+
+  showToast('🔒 Caja cerrada · Hasta mañana!');
+  setTimeout(() => {
+    pdvSaveState(null);
+    pdvGoScreen('apertura');
+    document.getElementById('pdvFondo').value = '';
+  }, 1800);
+}
+
+// PDV queue sync (runs alongside main syncQueue)
+async function pdvSyncQueue() {
+  if (!isOnline) return;
+  const q = pdvGetQueue();
+  if (!q.length) return;
+  const failed = [];
+  for (const item of q) {
+    let ok = false;
+    if (item.type === 'pdv_venta') ok = !!(await pdvSbInsert('pdv_ventas', item.data));
+    else if (item.type === 'pdv_caja_abrir') ok = !!(await pdvSbInsert('pdv_cajas', item.data));
+    else if (item.type === 'pdv_caja_cerrar') ok = await pdvSbPatch('pdv_cajas', `id=eq.${item.data.id}`, item.data);
+    if (!ok) failed.push(item);
+  }
+  pdvSaveQueue(failed);
+}
+
+window.pdvAbrirCaja = pdvAbrirCaja;
+window.pdvIrCobro = pdvIrCobro;
+window.pdvConfirmarVenta = pdvConfirmarVenta;
+window.pdvConfirmarCierre = pdvConfirmarCierre;
+window.pdvGoScreen = pdvGoScreen;
+window.pdvResetVenta = pdvResetVenta;
 
 // ============================================================
 // INIT
@@ -788,6 +1321,7 @@ async function init() {
   window.addEventListener('online', async () => {
     isOnline = true; setSyncState('online');
     await syncQueue();
+    await pdvSyncQueue();
     await fetchAll();
     renderHistorial(); renderResumen(); renderAmort(); updateOfflineBadge();
   });
@@ -804,7 +1338,8 @@ async function init() {
     setSyncState('syncing');
     try {
       await fetchAll();
-      await syncQueue(); // drena fila pendente
+      await syncQueue();     // drena fila produção
+      await pdvSyncQueue();  // drena fila PDV
     } catch(e) {
       setSyncState('offline');
       showToast('⚠️ Usando dados locais');
