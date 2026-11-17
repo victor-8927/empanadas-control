@@ -177,6 +177,21 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 .pdv-metodo.active-metodo{background:var(--green-dark)!important}
 .pdv-cambio-box{background:#ecfdf5;border:1px solid #d1fae5;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
 .pdv-z-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;background:#f9fafb;border-radius:9px;font-size:12px;margin-bottom:4px}
+.pdv-prod-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;cursor:pointer;transition:background .12s;-webkit-tap-highlight-color:transparent;user-select:none}
+.pdv-prod-card:active{background:#ecfdf5}
+.pdv-prod-card-emoji{font-size:26px;min-width:36px;text-align:center}
+.pdv-prod-card-name{flex:1;padding:0 10px;font-size:13px;font-weight:700;color:var(--text)}
+.pdv-prod-card-price{font-size:14px;font-weight:800;color:var(--green-dark)}
+.pdv-prod-qty-ctrl{display:flex;align-items:center;gap:6px;min-width:80px;justify-content:flex-end}
+.pdv-qty-btn{width:28px;height:28px;border-radius:50%;border:none;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .08s;-webkit-tap-highlight-color:transparent}
+.pdv-qty-btn:active{transform:scale(.88)}
+.pdv-qty-minus{background:#fef2f2;color:var(--red)}
+.pdv-qty-plus{background:var(--green);color:#fff}
+.pdv-qty-num{font-size:15px;font-weight:800;min-width:20px;text-align:center;color:var(--text)}
+.pdv-cat-title{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:4px 0 6px}
+.cardapio-item{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb}
+.cardapio-item.inativo{opacity:.45}
+.active-ccat{background:var(--green-dark)!important}
 @media print{.header,.nav-tabs,#pdv-screen-venta>div:first-child,#pdvNumpad,.btn-save,.btn-calc,.pdv-anular-btn{display:none!important}.tab-content:not(#tab-pdv){display:none!important}#tab-pdv{display:block!important}#pdv-screen-recibo{display:block!important}}
 </style>
 </head>
@@ -195,7 +210,8 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
     <button class="nav-tab active" onclick="setTab('hoy',this)">HOY</button>
     <button class="nav-tab" onclick="setTab('historial',this)">HISTORIAL</button>
     <button class="nav-tab" onclick="setTab('resumen',this)">RESUMEN</button>
-    <button class="nav-tab" onclick="setTab('pdv',this)" id="tabPDV" style="color:#34d399;font-weight:800;min-width:60px">PDV 🛒</button>
+    <button class="nav-tab" onclick="setTab('pdv',this)" id="tabPDV" style="color:#34d399;font-weight:800;min-width:50px">PDV 🛒</button>
+    <button class="nav-tab" onclick="setTab('cardapio',this)" id="tabCardapio" style="min-width:50px">📋</button>
   </nav>
 </div>
 
@@ -368,39 +384,34 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
       <button class="btn-save" onclick="pdvAbrirCaja()">✅ Abrir Caja</button>
     </div>
 
-    <!-- SCREEN: VENTA -->
+    <!-- SCREEN: VENTA (catálogo multi-item + carrinho) -->
     <div id="pdv-screen-venta" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--text3)" id="pdvVtOperador">Cajero</div>
-        </div>
-        <button class="btn-calc" onclick="pdvIrCierre()" style="background:#991b1b">Cerrar Caja 🔒</button>
+      <!-- Header operador + cerrar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text3)" id="pdvVtOperador">Cajero</div>
+        <button class="btn-calc" onclick="pdvIrCierre()" style="background:#991b1b;font-size:12px;padding:7px 10px">Cerrar Caja 🔒</button>
       </div>
 
-      <!-- Display cantidad + total -->
-      <div class="card" style="padding:0;overflow:hidden">
-        <div style="text-align:center;padding:20px 16px 10px">
-          <div style="font-size:64px;font-weight:900;color:var(--green);line-height:1" id="pdvQtyDisplay">0</div>
-          <div style="font-size:13px;color:var(--text3);margin-top:3px">empanadas</div>
-          <div style="font-size:40px;font-weight:900;color:var(--text);margin-top:10px" id="pdvTotalDisplay">$0.00</div>
-          <div style="font-size:11px;color:var(--text3)">TOTAL</div>
+      <!-- Carrinho summary (sticky topo) -->
+      <div id="pdvCarrinhoBar" style="background:var(--green-dark);border-radius:14px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;cursor:pointer" onclick="pdvToggleCarrinho()">
+        <div>
+          <span style="font-size:12px;color:rgba(255,255,255,.75)">🛒 Carrinho </span>
+          <span id="pdvCarrinhoCount" style="font-size:13px;font-weight:800;color:#fff">0 itens</span>
         </div>
-        <!-- Numpad -->
-        <div style="padding:0 14px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="pdvNumpad">
-          <button class="pdv-nk" data-n="1">1</button>
-          <button class="pdv-nk" data-n="2">2</button>
-          <button class="pdv-nk" data-n="3">3</button>
-          <button class="pdv-nk" data-n="4">4</button>
-          <button class="pdv-nk" data-n="5">5</button>
-          <button class="pdv-nk" data-n="6">6</button>
-          <button class="pdv-nk" data-n="7">7</button>
-          <button class="pdv-nk" data-n="8">8</button>
-          <button class="pdv-nk" data-n="9">9</button>
-          <button class="pdv-nk pdv-nk-zero" data-n="0">0</button>
-          <button class="pdv-nk pdv-nk-del" data-n="del">⌫</button>
-          <button class="pdv-nk pdv-nk-ok" onclick="pdvIrCobro()">COBRAR →</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span id="pdvCarrinhoTotal" style="font-size:20px;font-weight:900;color:#fff">$0.00</span>
+          <button class="btn-save" id="pdvBtnCobrar" onclick="event.stopPropagation();pdvIrCobro()" style="padding:8px 14px;font-size:13px;border-radius:10px;opacity:.5;pointer-events:none" disabled>COBRAR →</button>
         </div>
       </div>
+
+      <!-- Carrinho expandido (oculto por padrão) -->
+      <div id="pdvCarrinhoExpanded" style="display:none;background:#1f2937;border-radius:14px;padding:12px;margin-bottom:10px">
+        <div id="pdvCarrinhoItems" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+        <button onclick="pdvLimparCarrinho()" style="width:100%;padding:7px;background:#991b1b;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Limpar carrinho</button>
+      </div>
+
+      <!-- Catálogo por categoria -->
+      <div id="pdvCatalogo" style="display:flex;flex-direction:column;gap:12px"></div>
 
       <!-- Mini lista ventas del día -->
       <div class="card" style="margin-top:12px">
@@ -421,10 +432,13 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <button class="btn-calc" onclick="pdvGoScreen('venta')" style="background:#374151">← Cancelar</button>
       </div>
 
-      <div class="card" style="text-align:center;padding:20px 16px">
-        <div style="font-size:14px;color:var(--text3)" id="pdvCobroCant">0 empanadas</div>
-        <div style="font-size:44px;font-weight:900;color:var(--green);margin-top:4px" id="pdvCobroTotal">$0.00</div>
-        <div style="font-size:12px;color:var(--text3)">TOTAL A COBRAR</div>
+      <div class="card" style="padding:14px 16px">
+        <div id="pdvCobroItemsList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:13px"></div>
+        <div style="border-top:1px dashed var(--border);padding-top:8px;text-align:center">
+          <div style="font-size:14px;color:var(--text3)" id="pdvCobroCant">0 itens</div>
+          <div style="font-size:44px;font-weight:900;color:var(--green);margin-top:2px" id="pdvCobroTotal">$0.00</div>
+          <div style="font-size:12px;color:var(--text3)">TOTAL A COBRAR</div>
+        </div>
       </div>
 
       <div class="card">
@@ -470,7 +484,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Hora</span><span id="pdvRHora">—</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Operador</span><span id="pdvROperador">—</span></div>
         <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span id="pdvRProducto">Empanadas ×0</span><span id="pdvRSubtotal">$0.00</span></div>
+        <div id="pdvRItens" style="display:flex;flex-direction:column;gap:1px"></div>
         <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid var(--border);padding-top:8px;margin-top:4px"><span>TOTAL</span><span id="pdvRTotal">$0.00</span></div>
         <div id="pdvRBcvLine" style="display:none;justify-content:space-between;font-size:11px;padding:2px 0;color:#92400e;background:#fefce8;border-radius:4px;padding:3px 6px;margin:2px 0"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Pagó</span><span id="pdvRPago">$0.00</span></div>
@@ -520,6 +534,65 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
     </div>
 
   </div><!-- /tab-pdv -->
+
+  <!-- ========== ABA CARDÁPIO ========== -->
+  <div class="tab-content" id="tab-cardapio">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:800">📋 Cardápio</div>
+      <button class="btn-save" onclick="cardapioAbrirModal(null)" style="padding:8px 14px;font-size:13px;border-radius:10px">+ Produto</button>
+    </div>
+    <div id="cardapioLista" style="display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text3);padding:20px">Carregando…</div>
+    </div>
+
+    <!-- Modal criar/editar produto -->
+    <div id="cardapioModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:flex-end;justify-content:center">
+      <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:16px;font-weight:800" id="cardapioModalTitle">Novo Produto</div>
+          <button onclick="cardapioFecharModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer">✕</button>
+        </div>
+        <input type="hidden" id="cardapioModalId">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <label class="input-label">Nome do produto</label>
+            <input class="input-field" id="cardapioNome" placeholder="Ex: Empanada de Carne" style="font-size:15px">
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <label class="input-label">Emoji</label>
+              <input class="input-field" id="cardapioEmoji" placeholder="🫓" style="font-size:20px;text-align:center">
+            </div>
+            <div style="flex:2">
+              <label class="input-label">Preço (USD)</label>
+              <input class="input-field" id="cardapioPreco" type="number" placeholder="1.00" min="0" step="0.01" inputmode="decimal" style="font-size:18px;font-weight:700">
+            </div>
+          </div>
+          <div>
+            <label class="input-label">Categoria</label>
+            <div style="display:flex;gap:6px" id="cardapioCategoriaBtns">
+              <button class="btn-calc ccat active-ccat" data-c="empanada" onclick="cardapioSelCat(this)" style="flex:1;font-size:12px">🫓 Empanada</button>
+              <button class="btn-calc ccat" data-c="bebida" onclick="cardapioSelCat(this)" style="flex:1;font-size:12px;background:#374151">🥤 Bebida</button>
+              <button class="btn-calc ccat" data-c="outro" onclick="cardapioSelCat(this)" style="flex:1;font-size:12px;background:#374151">📦 Outro</button>
+            </div>
+          </div>
+          <div>
+            <label class="input-label">Ordem de exibição</label>
+            <input class="input-field" id="cardapioOrdem" type="number" placeholder="99" min="0">
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0">
+            <label class="input-label" style="margin:0">Ativo (visível no PDV)</label>
+            <input type="checkbox" id="cardapioAtivo" checked style="width:20px;height:20px;cursor:pointer">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn-calc" onclick="cardapioFecharModal()" style="flex:1;background:#374151">Cancelar</button>
+          <button class="btn-save" onclick="cardapioSalvar()" style="flex:2;border-radius:12px">💾 Salvar</button>
+        </div>
+        <button id="cardapioDeleteBtn" onclick="cardapioExcluir()" style="display:none;width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:14px">🗑️ Excluir produto</button>
+      </div>
+    </div>
+  </div><!-- /tab-cardapio -->
 
 </main>
 
@@ -976,13 +1049,17 @@ window.setTab = function(tab, el) {
   if (tab === 'historial') renderHistorial();
   if (tab === 'resumen') renderResumen();
   if (tab === 'pdv') pdvInit();
+  if (tab === 'cardapio') cardapioLoad();
 };
 
 // ============================================================
 // PDV — Punto de Venta
 // ============================================================
-const PRECIO_UNIT = 1.00;
 const PDV_SH = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+// Cache de produtos do cardápio (carregados do Supabase)
+let pdvProdutos = JSON.parse(localStorage.getItem('pdv_produtos_cache') || '[]');
+// Carrinho: [{ produto, qty }]
+let pdvCarrinho = [];
 
 // ── Tasa BCV ──────────────────────────────────────────────
 let bcvTasa = parseFloat(localStorage.getItem('bcv_tasa') || '0');
@@ -1017,9 +1094,8 @@ function bcvRenderUI() {
   if (bcvTasa) {
     if (txt) txt.textContent = `BCV: Bs. ${bcvTasa.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${bcvFecha}`;
     badge.style.display = 'flex';
-    // Atualiza displays que já estão visíveis
-    const qty = parseInt(document.getElementById('pdvQtyDisplay')?.textContent || '0') || 0;
-    if (qty > 0) pdvNumpadPress('=refresh');
+    // Atualiza carrinho se tiver itens
+    if (pdvCarrinho.length > 0) pdvAtualizarCarrinho();
   } else {
     badge.style.display = 'none';
   }
@@ -1072,7 +1148,6 @@ function pdvNextSerie() {
   return prefix + String(maxN + 1).padStart(4, '0');
 }
 
-let pdvQty = 0;
 let pdvMetodo = 'efectivo';
 
 function pdvGoScreen(id) {
@@ -1082,23 +1157,145 @@ function pdvGoScreen(id) {
   });
 }
 
-function pdvInit() {
-  // Busca tasa BCV (usa cache local se offline, atualiza badge)
-  bcvFetch();
+// ── Produtos / Cardápio ───────────────────────────────────────
+async function pdvCarregarProdutos() {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?order=ordem.asc,nome.asc`, { headers: PDV_SH });
+    if (r.ok) {
+      pdvProdutos = await r.json();
+      localStorage.setItem('pdv_produtos_cache', JSON.stringify(pdvProdutos));
+    }
+  } catch { /* usa cache */ }
+  pdvRenderCatalogo();
+}
 
-  // Atualiza data na apertura
+function pdvRenderCatalogo() {
+  const el = document.getElementById('pdvCatalogo');
+  if (!el) return;
+  const ativos = pdvProdutos.filter(p => p.ativo);
+  if (!ativos.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px">Nenhum produto ativo.<br>Cadastre no Cardápio 📋</div>';
+    return;
+  }
+  const cats = ['empanada','bebida','outro'];
+  const catLabel = { empanada:'🫓 Empanadas', bebida:'🥤 Bebidas', outro:'📦 Outros' };
+  el.innerHTML = cats.map(cat => {
+    const prods = ativos.filter(p => p.categoria === cat);
+    if (!prods.length) return '';
+    return `<div>
+      <div class="pdv-cat-title">${catLabel[cat]}</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        ${prods.map(p => {
+          const q = pdvCarrinho.find(i => i.produto.id === p.id)?.qty || 0;
+          return `<div class="pdv-prod-card" id="pdvCard_${p.id}">
+            <span class="pdv-prod-card-emoji">${p.emoji}</span>
+            <span class="pdv-prod-card-name">${p.nome}</span>
+            <span class="pdv-prod-card-price">$${parseFloat(p.preco).toFixed(2)}</span>
+            <div class="pdv-prod-qty-ctrl">
+              ${q > 0 ? `<button class="pdv-qty-btn pdv-qty-minus" onclick="pdvAjustarQty('${p.id}',-1)">−</button>
+              <span class="pdv-qty-num" id="pdvQtyNum_${p.id}">${q}</span>` : ''}
+              <button class="pdv-qty-btn pdv-qty-plus" onclick="pdvAjustarQty('${p.id}',+1)">+</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.pdvAjustarQty = function(prodId, delta) {
+  const prod = pdvProdutos.find(p => p.id === prodId);
+  if (!prod) return;
+  const idx = pdvCarrinho.findIndex(i => i.produto.id === prodId);
+  if (idx >= 0) {
+    pdvCarrinho[idx].qty += delta;
+    if (pdvCarrinho[idx].qty <= 0) pdvCarrinho.splice(idx, 1);
+  } else if (delta > 0) {
+    pdvCarrinho.push({ produto: prod, qty: 1 });
+  }
+  pdvAtualizarCarrinho();
+  // Atualiza só o card tocado
+  const cardEl = document.getElementById(`pdvCard_${prodId}`);
+  if (cardEl) {
+    const q = pdvCarrinho.find(i => i.produto.id === prodId)?.qty || 0;
+    const ctrl = cardEl.querySelector('.pdv-prod-qty-ctrl');
+    ctrl.innerHTML = q > 0
+      ? `<button class="pdv-qty-btn pdv-qty-minus" onclick="pdvAjustarQty('${prodId}',-1)">−</button>
+         <span class="pdv-qty-num">${q}</span>
+         <button class="pdv-qty-btn pdv-qty-plus" onclick="pdvAjustarQty('${prodId}',+1)">+</button>`
+      : `<button class="pdv-qty-btn pdv-qty-plus" onclick="pdvAjustarQty('${prodId}',+1)">+</button>`;
+    cardEl.style.background = q > 0 ? '#ecfdf5' : '';
+    cardEl.style.borderColor = q > 0 ? 'var(--green)' : '';
+  }
+};
+
+function pdvTotalCarrinho() {
+  return pdvCarrinho.reduce((s,i) => s + parseFloat(i.produto.preco) * i.qty, 0);
+}
+function pdvTotalItensCarrinho() {
+  return pdvCarrinho.reduce((s,i) => s + i.qty, 0);
+}
+
+function pdvAtualizarCarrinho() {
+  const total = pdvTotalCarrinho();
+  const count = pdvTotalItensCarrinho();
+  const countEl = document.getElementById('pdvCarrinhoCount');
+  const totalEl = document.getElementById('pdvCarrinhoTotal');
+  const btnCobrar = document.getElementById('pdvBtnCobrar');
+  if (countEl) countEl.textContent = count === 0 ? '0 itens' : `${count} item${count>1?'s':''}`;
+  if (totalEl) {
+    const bs = bcvBs(total);
+    totalEl.textContent = `$${total.toFixed(2)}${bs ? ' · '+bs : ''}`;
+  }
+  if (btnCobrar) {
+    btnCobrar.disabled = count === 0;
+    btnCobrar.style.opacity = count > 0 ? '1' : '.5';
+    btnCobrar.style.pointerEvents = count > 0 ? '' : 'none';
+  }
+  // Atualiza expanded se aberto
+  const exp = document.getElementById('pdvCarrinhoExpanded');
+  if (exp && exp.style.display !== 'none') pdvRenderCarrinhoExpanded();
+}
+
+function pdvRenderCarrinhoExpanded() {
+  const el = document.getElementById('pdvCarrinhoItems');
+  if (!el) return;
+  el.innerHTML = pdvCarrinho.map(i => `
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid #374151">
+      <span>${i.produto.emoji} ${i.produto.nome}</span>
+      <span>×${i.qty} · <b>$${(parseFloat(i.produto.preco)*i.qty).toFixed(2)}</b></span>
+    </div>`).join('') || '<div style="color:var(--text3);font-size:13px">Carrinho vazio</div>';
+}
+
+window.pdvToggleCarrinho = function() {
+  const exp = document.getElementById('pdvCarrinhoExpanded');
+  if (!exp) return;
+  if (exp.style.display === 'none') {
+    pdvRenderCarrinhoExpanded();
+    exp.style.display = 'block';
+  } else {
+    exp.style.display = 'none';
+  }
+};
+
+window.pdvLimparCarrinho = function() {
+  pdvCarrinho = [];
+  pdvAtualizarCarrinho();
+  pdvRenderCatalogo();
+  document.getElementById('pdvCarrinhoExpanded').style.display = 'none';
+};
+
+function pdvInit() {
+  bcvFetch();
+  if (isOnline) pdvCarregarProdutos();
+  else pdvRenderCatalogo();
+
   const fechaEl = document.getElementById('pdvApFecha');
   if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-
-  // Setup numpad
-  document.querySelectorAll('.pdv-nk[data-n]').forEach(btn => {
-    btn.onclick = () => pdvNumpadPress(btn.dataset.n);
-  });
 
   const st = pdvGetState();
   const hoy = new Date().toISOString().slice(0,10);
   if (st && st.fecha === hoy && st.estado === 'abierta') {
-    // Caja já aberta hoje — vai direto pra venta
     pdvGoScreen('venta');
     document.getElementById('pdvVtOperador').textContent = st.operador;
     pdvRenderVentaList();
@@ -1107,22 +1304,10 @@ function pdvInit() {
   }
 }
 
-function pdvNumpadPress(n) {
-  if (n !== '=refresh') {
-    if (n === 'del') { pdvQty = Math.floor(pdvQty / 10); }
-    else if (n === '0') { if (pdvQty > 0) pdvQty = pdvQty * 10; }
-    else { const v = pdvQty * 10 + parseInt(n); pdvQty = v > 999 ? 999 : v; }
-  }
-  document.getElementById('pdvQtyDisplay').textContent = pdvQty;
-  const usd = pdvQty * PRECIO_UNIT;
-  const bs  = bcvBs(usd);
-  document.getElementById('pdvTotalDisplay').textContent = '$' + usd.toFixed(2) + (bs ? ' · ' + bs : '');
-}
-
 function pdvResetVenta() {
-  pdvQty = 0;
-  document.getElementById('pdvQtyDisplay').textContent = '0';
-  document.getElementById('pdvTotalDisplay').textContent = '$0.00';
+  pdvCarrinho = [];
+  pdvAtualizarCarrinho();
+  pdvRenderCatalogo();
 }
 
 async function pdvAbrirCaja() {
@@ -1155,11 +1340,23 @@ async function pdvAbrirCaja() {
 }
 
 function pdvIrCobro() {
-  if (pdvQty <= 0) { showToast('⚠️ Ingresa una cantidad'); return; }
+  if (pdvCarrinho.length === 0) { showToast('⚠️ Carrinho vazio'); return; }
   const serie = pdvNextSerie();
-  const total = pdvQty * PRECIO_UNIT;
+  const total = pdvTotalCarrinho();
+  const count = pdvTotalItensCarrinho();
+
   document.getElementById('pdvCobroSerie').textContent = `Serie: ${serie}`;
-  document.getElementById('pdvCobroCant').textContent = `${pdvQty} empanada${pdvQty > 1 ? 's' : ''}`;
+  // Lista de itens no cobro
+  const listEl = document.getElementById('pdvCobroItemsList');
+  if (listEl) {
+    listEl.innerHTML = pdvCarrinho.map(i =>
+      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">
+        <span>${i.produto.emoji} ${i.produto.nome} ×${i.qty}</span>
+        <span>$${(parseFloat(i.produto.preco)*i.qty).toFixed(2)}</span>
+       </div>`
+    ).join('');
+  }
+  document.getElementById('pdvCobroCant').textContent = `${count} item${count>1?'s':''}`;
   const bs = bcvBs(total);
   document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}` + (bs ? ` · ${bs}` : '');
   document.getElementById('pdvCobroTotal').title = bs ? `Equivale a ${bs}` : '';
@@ -1185,8 +1382,8 @@ function pdvIrCobro() {
   });
   pdvMetodo = 'efectivo';
 
-  // Guarda em sessionStorage para confirmarVenta
-  sessionStorage.setItem('pdv_pending', JSON.stringify({ serie, qty: pdvQty, total }));
+  // Guarda carrinho no sessionStorage para confirmarVenta
+  sessionStorage.setItem('pdv_pending', JSON.stringify({ serie, itens: pdvCarrinho, total }));
   pdvGoScreen('cobro');
 }
 
@@ -1225,7 +1422,9 @@ async function pdvConfirmarVenta() {
   const venta = {
     serie: pending.serie, fecha: hoy, hora: ahora,
     operador: st?.operador || 'Cajero',
-    cantidad: pending.qty, precio_unit: PRECIO_UNIT, total: pending.total,
+    itens: pending.itens,
+    cantidad: pending.itens.reduce((s,i) => s + i.qty, 0),
+    total: pending.total,
     pago_recibido: pago, cambio, metodo_pago: pdvMetodo,
     caja_id: st?.cajaId || null, anulada: false,
     tasa_bcv: bcvTasa || null, total_bs: bcvTasa ? parseFloat((pending.total * bcvTasa).toFixed(2)) : null
@@ -1251,8 +1450,16 @@ async function pdvConfirmarVenta() {
   document.getElementById('pdvRFecha').textContent = hoy;
   document.getElementById('pdvRHora').textContent = ahora;
   document.getElementById('pdvROperador').textContent = st?.operador || 'Cajero';
-  document.getElementById('pdvRProducto').textContent = `Empanadas ×${pending.qty}`;
-  document.getElementById('pdvRSubtotal').textContent = `$${pending.total.toFixed(2)}`;
+  // Itens do recibo
+  const rItensEl = document.getElementById('pdvRItens');
+  if (rItensEl) {
+    rItensEl.innerHTML = (pending.itens||[]).map(i =>
+      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:1px solid #374151">
+        <span>${i.produto.emoji} ${i.produto.nome} ×${i.qty}</span>
+        <span>$${(parseFloat(i.produto.preco)*i.qty).toFixed(2)}</span>
+       </div>`
+    ).join('');
+  }
   document.getElementById('pdvRTotal').textContent = `$${pending.total.toFixed(2)}`;
   document.getElementById('pdvRPago').textContent = `$${pago.toFixed(2)}`;
   document.getElementById('pdvRCambio').textContent = `$${cambio.toFixed(2)}`;
@@ -1298,7 +1505,7 @@ function pdvRenderVentaList() {
     list.innerHTML = ventas.map(v => `
       <div class="pdv-venta-item${v.anulada?' anulada':''}">
         <span style="font-weight:700;color:var(--green-dark)">${v.serie}</span>
-        <span>${v.cantidad} emp · <b>$${v.total.toFixed(2)}</b></span>
+        <span>${v.itens ? v.itens.map(i=>`${i.produto.emoji}×${i.qty}`).join(' ') : `${v.cantidad||0} item`} · <b>$${v.total.toFixed(2)}</b></span>
         <span style="color:var(--text3)">${v.hora}</span>
         ${!v.anulada ? `<button class="pdv-anular-btn" onclick="pdvAnularVenta('${v.serie}')">🚫</button>` : '<span style="color:var(--red);font-size:11px">Anulada</span>'}
       </div>`).join('');
@@ -1334,7 +1541,7 @@ window.pdvIrCierre = function() {
   det.innerHTML = activas.length ? activas.map(v => `
     <div class="pdv-z-row">
       <span style="font-weight:700;color:var(--green-dark)">${v.serie}</span>
-      <span>${v.cantidad} emp</span>
+      <span>${v.itens ? v.itens.map(i=>`${i.produto.emoji}×${i.qty}`).join(' ') : `${v.cantidad||0}itm`}</span>
       <span style="font-weight:700">$${v.total.toFixed(2)}</span>
       <span style="color:var(--text3);font-size:11px">${v.hora}</span>
     </div>`).join('') : '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>';
@@ -1448,6 +1655,131 @@ async function init() {
 }
 
 init();
+
+// ============================================================
+// CARDÁPIO — CRUD de Produtos
+// ============================================================
+async function cardapioLoad() {
+  const lista = document.getElementById('cardapioLista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:16px">Carregando...</div>';
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?order=ordem.asc,nome.asc`, { headers: PDV_SH });
+    if (r.ok) {
+      pdvProdutos = await r.json();
+      localStorage.setItem('pdv_produtos_cache', JSON.stringify(pdvProdutos));
+    }
+  } catch {}
+  cardapioRender();
+}
+
+function cardapioRender() {
+  const lista = document.getElementById('cardapioLista');
+  if (!lista) return;
+  if (!pdvProdutos.length) {
+    lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px">Nenhum produto. Clique em + Produto para começar.</div>';
+    return;
+  }
+  lista.innerHTML = pdvProdutos.map(p => `
+    <div class="cardapio-item${p.ativo?'':' inativo'}" onclick="cardapioAbrirModal(${JSON.stringify(JSON.stringify(p))})">
+      <span style="font-size:24px">${p.emoji}</span>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px">${p.nome}</div>
+        <div style="font-size:11px;color:var(--text3)">${{empanada:'Empanada',bebida:'Bebida',outro:'Outro'}[p.categoria]||p.categoria}${p.ativo?'':' · Inativo'}</div>
+      </div>
+      <span style="font-weight:800;color:var(--green-dark);font-size:15px">$${parseFloat(p.preco).toFixed(2)}</span>
+      <span style="font-size:18px;color:var(--text3)">›</span>
+    </div>`).join('');
+}
+
+window.cardapioAbrirModal = function(prodJson) {
+  const prod = prodJson ? JSON.parse(prodJson) : null;
+  document.getElementById('cardapioModalTitle').textContent = prod ? 'Editar Produto' : 'Novo Produto';
+  document.getElementById('cardapioModalId').value  = prod?.id || '';
+  document.getElementById('cardapioNome').value     = prod?.nome || '';
+  document.getElementById('cardapioEmoji').value    = prod?.emoji || '🫓';
+  document.getElementById('cardapioPreco').value    = prod?.preco || '';
+  document.getElementById('cardapioOrdem').value    = prod?.ordem ?? 99;
+  document.getElementById('cardapioAtivo').checked  = prod ? prod.ativo : true;
+  // Categoria
+  const cat = prod?.categoria || 'empanada';
+  document.querySelectorAll('.ccat').forEach(b => {
+    b.classList.toggle('active-ccat', b.dataset.c === cat);
+    b.style.background = b.dataset.c === cat ? '' : '#374151';
+  });
+  // Botão excluir só aparece em edição
+  const excBtn = document.getElementById('cardapioDeleteBtn');
+  if (excBtn) excBtn.style.display = prod ? 'block' : 'none';
+  document.getElementById('cardapioModal').style.display = 'flex';
+};
+
+window.cardapioFecharModal = function() {
+  document.getElementById('cardapioModal').style.display = 'none';
+};
+
+window.cardapioSelCat = function(btn) {
+  document.querySelectorAll('.ccat').forEach(b => { b.classList.remove('active-ccat'); b.style.background='#374151'; });
+  btn.classList.add('active-ccat'); btn.style.background='';
+};
+
+window.cardapioSalvar = async function() {
+  const id    = document.getElementById('cardapioModalId').value;
+  const nome  = document.getElementById('cardapioNome').value.trim();
+  const emoji = document.getElementById('cardapioEmoji').value.trim() || '🫓';
+  const preco = parseFloat(document.getElementById('cardapioPreco').value);
+  const ordem = parseInt(document.getElementById('cardapioOrdem').value) || 99;
+  const ativo = document.getElementById('cardapioAtivo').checked;
+  const catBtn = document.querySelector('.ccat.active-ccat');
+  const categoria = catBtn?.dataset.c || 'empanada';
+
+  if (!nome) { showToast('⚠️ Nome é obrigatório'); return; }
+  if (isNaN(preco) || preco < 0) { showToast('⚠️ Preço inválido'); return; }
+
+  const payload = { nome, emoji, preco, categoria, ordem, ativo };
+  let ok = false;
+  try {
+    if (id) {
+      const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?id=eq.${id}`, {
+        method:'PATCH', headers: PDV_SH, body: JSON.stringify(payload)
+      });
+      ok = r.ok;
+    } else {
+      const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos`, {
+        method:'POST', headers: PDV_SH, body: JSON.stringify(payload)
+      });
+      ok = r.ok;
+    }
+  } catch { ok = false; }
+
+  if (ok) {
+    showToast(id ? '✅ Produto atualizado' : '✅ Produto criado');
+    cardapioFecharModal();
+    await cardapioLoad();
+    // Atualiza cache do PDV também
+    if (document.getElementById('pdvCatalogo')) pdvRenderCatalogo();
+  } else {
+    showToast('❌ Erro ao salvar. Verifique conexão.');
+  }
+};
+
+window.cardapioExcluir = async function() {
+  const id = document.getElementById('cardapioModalId').value;
+  if (!id) return;
+  if (!confirm('Excluir produto permanentemente?')) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?id=eq.${id}`, {
+      method:'DELETE', headers: PDV_SH
+    });
+    if (r.ok) {
+      showToast('🗑️ Produto excluído');
+      cardapioFecharModal();
+      await cardapioLoad();
+      if (document.getElementById('pdvCatalogo')) pdvRenderCatalogo();
+    } else {
+      showToast('❌ Erro ao excluir');
+    }
+  } catch { showToast('❌ Sem conexão'); }
+};
 </script>
 </body>
 </html>
