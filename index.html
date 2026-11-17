@@ -342,6 +342,11 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
   ══════════════════════════════════════════════ -->
   <div class="tab-content" id="tab-pdv">
 
+    <!-- Badge BCV — visível em todas as telas do PDV -->
+    <div id="pdvBcvBadge" style="display:none;align-items:center;gap:6px;background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;color:#92400e;margin-bottom:8px;cursor:pointer" onclick="pdvBcvManual()" title="Clique para ajustar manualmente">
+      <span>🏦</span><span id="pdvBcvText">BCV: carregando…</span><span style="opacity:.6;font-size:10px">✎</span>
+    </div>
+
     <!-- SCREEN: APERTURA -->
     <div id="pdv-screen-apertura">
       <div style="text-align:center;padding:24px 0 12px">
@@ -467,6 +472,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span id="pdvRProducto">Empanadas ×0</span><span id="pdvRSubtotal">$0.00</span></div>
         <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid var(--border);padding-top:8px;margin-top:4px"><span>TOTAL</span><span id="pdvRTotal">$0.00</span></div>
+        <div id="pdvRBcvLine" style="display:none;justify-content:space-between;font-size:11px;padding:2px 0;color:#92400e;background:#fefce8;border-radius:4px;padding:3px 6px;margin:2px 0"></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Pagó</span><span id="pdvRPago">$0.00</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--green);font-weight:700"><span>Cambio</span><span id="pdvRCambio">$0.00</span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Método</span><span id="pdvRMetodo">Efectivo</span></div>
@@ -496,6 +502,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <div style="background:var(--green-dark);color:#fff;border-radius:12px;padding:14px 16px;text-align:center;margin-top:12px">
           <div style="font-size:12px;opacity:.8">TOTAL COBRADO</div>
           <div style="font-size:30px;font-weight:900;margin-top:2px" id="pdvZTotalCobrado">$0.00</div>
+          <div id="pdvZTotalBs" style="display:none;font-size:14px;opacity:.85;margin-top:4px;font-weight:700"></div>
         </div>
       </div>
 
@@ -977,6 +984,61 @@ window.setTab = function(tab, el) {
 const PRECIO_UNIT = 1.00;
 const PDV_SH = { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
 
+// ── Tasa BCV ──────────────────────────────────────────────
+let bcvTasa = parseFloat(localStorage.getItem('bcv_tasa') || '0');
+let bcvFecha = localStorage.getItem('bcv_fecha') || '';
+
+async function bcvFetch() {
+  try {
+    const r = await fetch('https://bcv.today/api/rate.json', { cache: 'no-store' });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    // Formato: { date: "2026-11-17", rates: { USD: 890.98, EUR: ... } }
+    const tasa = d.rates?.USD || d.USD || d.usd;
+    if (tasa && tasa > 0) {
+      bcvTasa = parseFloat(tasa);
+      bcvFecha = d.date || new Date().toISOString().slice(0,10);
+      localStorage.setItem('bcv_tasa', bcvTasa);
+      localStorage.setItem('bcv_fecha', bcvFecha);
+      bcvRenderUI();
+    }
+  } catch { /* usa cache local se offline */ }
+}
+
+function bcvBs(usd) {
+  if (!bcvTasa) return '';
+  return 'Bs. ' + (usd * bcvTasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function bcvRenderUI() {
+  const badge = document.getElementById('pdvBcvBadge');
+  const txt   = document.getElementById('pdvBcvText');
+  if (!badge) return;
+  if (bcvTasa) {
+    if (txt) txt.textContent = `BCV: Bs. ${bcvTasa.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${bcvFecha}`;
+    badge.style.display = 'flex';
+    // Atualiza displays que já estão visíveis
+    const qty = parseInt(document.getElementById('pdvQtyDisplay')?.textContent || '0') || 0;
+    if (qty > 0) pdvNumpadPress('=refresh');
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Override manual da tasa BCV (para quando a API estiver offline)
+window.pdvBcvManual = function() {
+  const atual = bcvTasa ? bcvTasa.toFixed(2) : '';
+  const v = prompt(`Tasa BCV (Bs por $1 USD)\nAtual: ${atual || 'não definida'}`, atual);
+  if (v === null) return;
+  const n = parseFloat(v.replace(',','.'));
+  if (!n || n < 1) { alert('Tasa inválida'); return; }
+  bcvTasa = n;
+  bcvFecha = new Date().toISOString().slice(0,10) + ' (manual)';
+  localStorage.setItem('bcv_tasa', bcvTasa);
+  localStorage.setItem('bcv_fecha', bcvFecha);
+  bcvRenderUI();
+};
+
 async function pdvSbInsert(table, row) {
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, { method: 'POST', headers: PDV_SH, body: JSON.stringify(row) });
@@ -1021,6 +1083,9 @@ function pdvGoScreen(id) {
 }
 
 function pdvInit() {
+  // Busca tasa BCV (usa cache local se offline, atualiza badge)
+  bcvFetch();
+
   // Atualiza data na apertura
   const fechaEl = document.getElementById('pdvApFecha');
   if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
@@ -1043,11 +1108,15 @@ function pdvInit() {
 }
 
 function pdvNumpadPress(n) {
-  if (n === 'del') { pdvQty = Math.floor(pdvQty / 10); }
-  else if (n === '0') { if (pdvQty > 0) pdvQty = pdvQty * 10; }
-  else { const v = pdvQty * 10 + parseInt(n); pdvQty = v > 999 ? 999 : v; }
+  if (n !== '=refresh') {
+    if (n === 'del') { pdvQty = Math.floor(pdvQty / 10); }
+    else if (n === '0') { if (pdvQty > 0) pdvQty = pdvQty * 10; }
+    else { const v = pdvQty * 10 + parseInt(n); pdvQty = v > 999 ? 999 : v; }
+  }
   document.getElementById('pdvQtyDisplay').textContent = pdvQty;
-  document.getElementById('pdvTotalDisplay').textContent = '$' + (pdvQty * PRECIO_UNIT).toFixed(2);
+  const usd = pdvQty * PRECIO_UNIT;
+  const bs  = bcvBs(usd);
+  document.getElementById('pdvTotalDisplay').textContent = '$' + usd.toFixed(2) + (bs ? ' · ' + bs : '');
 }
 
 function pdvResetVenta() {
@@ -1091,7 +1160,9 @@ function pdvIrCobro() {
   const total = pdvQty * PRECIO_UNIT;
   document.getElementById('pdvCobroSerie').textContent = `Serie: ${serie}`;
   document.getElementById('pdvCobroCant').textContent = `${pdvQty} empanada${pdvQty > 1 ? 's' : ''}`;
-  document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}`;
+  const bs = bcvBs(total);
+  document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}` + (bs ? ` · ${bs}` : '');
+  document.getElementById('pdvCobroTotal').title = bs ? `Equivale a ${bs}` : '';
   document.getElementById('pdvPagoInput').value = '';
   document.getElementById('pdvCambioBox').style.display = 'none';
 
@@ -1156,7 +1227,8 @@ async function pdvConfirmarVenta() {
     operador: st?.operador || 'Cajero',
     cantidad: pending.qty, precio_unit: PRECIO_UNIT, total: pending.total,
     pago_recibido: pago, cambio, metodo_pago: pdvMetodo,
-    caja_id: st?.cajaId || null, anulada: false
+    caja_id: st?.cajaId || null, anulada: false,
+    tasa_bcv: bcvTasa || null, total_bs: bcvTasa ? parseFloat((pending.total * bcvTasa).toFixed(2)) : null
   };
 
   // Salva local
@@ -1185,6 +1257,13 @@ async function pdvConfirmarVenta() {
   document.getElementById('pdvRPago').textContent = `$${pago.toFixed(2)}`;
   document.getElementById('pdvRCambio').textContent = `$${cambio.toFixed(2)}`;
   document.getElementById('pdvRMetodo').textContent = { efectivo:'Efectivo', transferencia:'Transferencia', otro:'Otro' }[pdvMetodo] || pdvMetodo;
+  // Equivalência em Bs.
+  const reciboTasaEl = document.getElementById('pdvRBcvLine');
+  if (reciboTasaEl) {
+    const bs = bcvBs(pending.total);
+    reciboTasaEl.style.display = bs ? 'flex' : 'none';
+    if (bs) reciboTasaEl.innerHTML = `<span>Total en Bs.</span><span>${bs}</span>`;
+  }
 
   pdvRenderVentaList();
   pdvGoScreen('recibo');
@@ -1244,6 +1323,12 @@ window.pdvIrCierre = function() {
   document.getElementById('pdvZTotalVentas').textContent = activas.length;
   document.getElementById('pdvZAnuladas').textContent = anuladas.length;
   document.getElementById('pdvZTotalCobrado').textContent = `$${totalCobrado.toFixed(2)}`;
+  const zBsEl = document.getElementById('pdvZTotalBs');
+  if (zBsEl) {
+    const bs = bcvBs(totalCobrado);
+    zBsEl.textContent = bs ? `≈ ${bs}` : '';
+    zBsEl.style.display = bs ? 'block' : 'none';
+  }
 
   const det = document.getElementById('pdvZDetalle');
   det.innerHTML = activas.length ? activas.map(v => `
@@ -1324,6 +1409,8 @@ async function init() {
     await pdvSyncQueue();
     await fetchAll();
     renderHistorial(); renderResumen(); renderAmort(); updateOfflineBadge();
+    // Atualiza tasa BCV ao reconectar
+    bcvFetch();
   });
   window.addEventListener('offline', () => {
     isOnline = false; setSyncState('offline'); updateOfflineBadge();
