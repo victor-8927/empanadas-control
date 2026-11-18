@@ -1413,12 +1413,28 @@ async function bcvFetch() {
   // EP2: bcv.today/rate.json — GitHub Pages, scrape directo del BCV, sin clave
   // EP3: bcv.today/history/FECHA.json — fallback histórico del día actual
   const hoy = localDateStr();
+
+  // Venezuela usa ponto como separador de milhar e vírgula como decimal.
+  // O BCV publica "916.647.700.000" (= 916,647,700,000 Bs/USD).
+  // parseFloat pararia em "916.647" — essa função normaliza para JS float.
+  function parseBcvNum(val) {
+    if (val === null || val === undefined) return 0;
+    const s = String(val).trim();
+    // Se vier como número JS nativo (sem ponto-de-milhar extra), retorna direto
+    if (/^\d+(\.\d+)?$/.test(s) && (s.match(/\./g)||[]).length <= 1) return parseFloat(s) || 0;
+    // Formato venezuelano: pontos = milhar, vírgula = decimal  "916.647.700,00"
+    if (s.includes(',')) return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+    // Apenas pontos = separador de milhar (nenhuma vírgula)  "916.647.700.000"
+    return parseFloat(s.replace(/\./g,'')) || 0;
+  }
+
   const ENDPOINTS = [
     {
       url: 'https://pydolarve.org/api/v1/dollar?monitor=bcv',
       parse: d => {
-        // { price: 890.98, last_update: "2026-11-17T..." }
-        const tasa = parseFloat(d?.price ?? d?.data?.price ?? 0);
+        // { price: 890.98 } ou { price: "916.647.700.000" }
+        const raw = d?.price ?? d?.data?.price;
+        const tasa = parseBcvNum(raw);
         const fecha = (d?.last_update || d?.data?.last_update || '').slice(0, 10);
         return tasa > 0 ? { tasa, fecha: fecha || hoy } : null;
       }
@@ -1426,8 +1442,9 @@ async function bcvFetch() {
     {
       url: 'https://bcv.today/api/rate.json',
       parse: d => {
-        // { "USD": 890.98, "EUR": 997.27, "date": "2026-11-17" }
-        const tasa = parseFloat(d?.USD ?? d?.usd ?? 0);
+        // { "USD": 890.98 } ou { "USD": "916.647.700.000" }
+        const raw = d?.USD ?? d?.usd;
+        const tasa = parseBcvNum(raw);
         const fecha = (d?.date || '').slice(0, 10);
         return tasa > 0 ? { tasa, fecha: fecha || hoy } : null;
       }
@@ -1435,7 +1452,7 @@ async function bcvFetch() {
     {
       url: `https://bcv.today/api/history/${hoy}.json`,
       parse: d => {
-        const tasa = parseFloat(d?.USD ?? d?.usd ?? 0);
+        const tasa = parseBcvNum(d?.USD ?? d?.usd);
         return tasa > 0 ? { tasa, fecha: hoy } : null;
       }
     }
@@ -1483,7 +1500,16 @@ window.pdvBcvManual = function() {
   const atual = bcvTasa ? bcvTasa.toFixed(2) : '';
   const v = prompt(`Tasa BCV (Bs por $1 USD)\nAtual: ${atual || 'não definida'}`, atual);
   if (v === null) return;
-  const n = parseFloat(v.replace(',','.'));
+  // Aceita "916.647.700" (venezolano) ou "916647700" ou "916,647,700"
+  const cleaned = v.trim().replace(/\s/g,'');
+  let n;
+  if ((cleaned.match(/\./g)||[]).length > 1) {
+    n = parseFloat(cleaned.replace(/\./g,'')); // pontos = milhar
+  } else if (cleaned.includes(',') && cleaned.includes('.')) {
+    n = parseFloat(cleaned.replace(/\./g,'').replace(',','.')); // 916.647,00
+  } else {
+    n = parseFloat(cleaned.replace(',','.'));
+  }
   if (!n || n < 1) { alert('Tasa inválida'); return; }
   bcvTasa = n;
   bcvFecha = localDateStr() + ' (manual)';
