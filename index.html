@@ -594,15 +594,16 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 
       <div class="card">
         <div class="card-title">Resumen del Día</div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Apertura</span><span id="pdvZApertura">—</span></div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Operador</span><span id="pdvZOperador">—</span></div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Fondo inicial</span><span id="pdvZFondo">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>Total ventas</span><span id="pdvZTotalVentas" style="font-weight:800">0</span></div>
-        <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px"><span>Ventas anuladas</span><span id="pdvZAnuladas" style="color:var(--red)">0</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>🕐 Apertura</span><span id="pdvZApertura" style="font-weight:600">—</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>🕐 Encerramento</span><span id="pdvZCierre" style="font-weight:600">—</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>👤 Cajero(a)</span><span id="pdvZOperador">—</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>💵 Fondo inicial</span><span id="pdvZFondo">$0.00</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f3f4f6;font-size:13px"><span>✅ Ventas confirmadas</span><span id="pdvZTotalVentas" style="font-weight:800">0</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:13px"><span>❌ Ventas anuladas</span><span id="pdvZAnuladas" style="color:var(--red)">0</span></div>
         <div style="background:var(--green-dark);color:#fff;border-radius:12px;padding:14px 16px;text-align:center;margin-top:12px">
-          <div style="font-size:12px;opacity:.8">TOTAL COBRADO</div>
-          <div style="font-size:30px;font-weight:900;margin-top:2px" id="pdvZTotalCobrado">$0.00</div>
-          <div id="pdvZTotalBs" style="display:none;font-size:14px;opacity:.85;margin-top:4px;font-weight:700"></div>
+          <div style="font-size:11px;opacity:.7;letter-spacing:.5px">TOTAL COBRADO</div>
+          <div style="font-size:32px;font-weight:900;margin-top:2px" id="pdvZTotalCobrado">$0.00</div>
+          <div id="pdvZTotalBs" style="display:none;font-size:15px;opacity:.9;margin-top:4px;font-weight:700;border-top:1px solid rgba(255,255,255,.25);padding-top:6px"></div>
         </div>
       </div>
 
@@ -1358,6 +1359,15 @@ function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+// Sempre usa data LOCAL (não UTC) — crítico para fuso Venezuela (UTC-4:30)
+function localDateStr(d) {
+  const dt = d || new Date();
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function localTimeStr(d) {
+  const dt = d || new Date();
+  return `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+}
 function formatDate(key) {
   const [y,m,d] = key.split('-');
   const DAYS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1402,7 +1412,7 @@ async function bcvFetch() {
   // EP1: pydolarve.org — API venezolana gratuita, sin clave, monitor BCV oficial
   // EP2: bcv.today/rate.json — GitHub Pages, scrape directo del BCV, sin clave
   // EP3: bcv.today/history/FECHA.json — fallback histórico del día actual
-  const hoy = new Date().toISOString().slice(0, 10);
+  const hoy = localDateStr();
   const ENDPOINTS = [
     {
       url: 'https://pydolarve.org/api/v1/dollar?monitor=bcv',
@@ -1438,7 +1448,7 @@ async function bcvFetch() {
       const result = ep.parse(d);
       if (result && result.tasa > 0) {
         bcvTasa = result.tasa;
-        bcvFecha = result.fecha || new Date().toISOString().slice(0,10);
+        bcvFecha = result.fecha || localDateStr();
         localStorage.setItem('bcv_tasa', bcvTasa);
         localStorage.setItem('bcv_fecha', bcvFecha);
         bcvRenderUI();
@@ -1476,7 +1486,7 @@ window.pdvBcvManual = function() {
   const n = parseFloat(v.replace(',','.'));
   if (!n || n < 1) { alert('Tasa inválida'); return; }
   bcvTasa = n;
-  bcvFecha = new Date().toISOString().slice(0,10) + ' (manual)';
+  bcvFecha = localDateStr() + ' (manual)';
   localStorage.setItem('bcv_tasa', bcvTasa);
   localStorage.setItem('bcv_fecha', bcvFecha);
   bcvRenderUI();
@@ -1661,7 +1671,7 @@ function pdvInit() {
   if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-VE', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   const st = pdvGetState();
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = localDateStr();
   if (st && st.fecha === hoy && st.estado === 'abierta') {
     pdvGoScreen('venta');
     document.getElementById('pdvVtOperador').textContent = st.operador;
@@ -1680,8 +1690,8 @@ function pdvResetVenta() {
 async function pdvAbrirCaja() {
   const operador = document.getElementById('pdvOperador').value.trim() || 'Cajero';
   const fondo = parseFloat(document.getElementById('pdvFondo').value) || 0;
-  const hoy = new Date().toISOString().slice(0,10);
-  const ahora = new Date().toTimeString().slice(0,5);
+  const hoy = localDateStr();
+  const ahora = localTimeStr();
   const cajaId = `caja_${hoy}_${Date.now()}`;
 
   const st = { cajaId, fecha: hoy, operador, fondo_inicial: fondo, apertura_at: ahora, estado: 'abierta' };
@@ -1810,8 +1820,8 @@ async function pdvConfirmarVenta() {
   const pending = JSON.parse(sessionStorage.getItem('pdv_pending') || '{}');
   if (!pending.serie) { showToast('⚠️ Error: recarga y vuelve a intentar'); return; }
 
-  const hoy = new Date().toISOString().slice(0,10);
-  const ahora = new Date().toTimeString().slice(0,5);
+  const hoy = localDateStr();
+  const ahora = localTimeStr();
   const st = pdvGetState();
 
   const total = pending.total;
@@ -1942,7 +1952,7 @@ window.pdvAnularVenta = function(serie) {
 
 function pdvRenderVentaList() {
   const list = document.getElementById('pdvVtList');
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = localDateStr();
   const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
   if (!ventas.length) { list.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:10px">Sin ventas aún</div>'; }
   else {
@@ -1961,14 +1971,19 @@ function pdvRenderVentaList() {
 }
 
 window.pdvIrCierre = function() {
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = localDateStr();
   const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
   const activas = ventas.filter(v => !v.anulada);
   const anuladas = ventas.filter(v => v.anulada);
   const totalCobrado = activas.reduce((s,v) => s + v.total, 0);
   const st = pdvGetState();
 
-  document.getElementById('pdvZApertura').textContent = st?.apertura_at || '—';
+  // Hora de apertura — salva como "HH:MM" mas exibe com data local
+  const aperturaHora = st?.apertura_at || '—';
+  const aperturaFecha = st?.fecha || hoy;
+  document.getElementById('pdvZApertura').textContent = aperturaHora !== '—' ? `${aperturaFecha}  ${aperturaHora}` : '—';
+  document.getElementById('pdvZCierre').textContent = `${hoy}  ${localTimeStr()}  (ahora)`;
+
   document.getElementById('pdvZOperador').textContent = st?.operador || '—';
   document.getElementById('pdvZFondo').textContent = `$${(st?.fondo_inicial || 0).toFixed(2)}`;
   document.getElementById('pdvZTotalVentas').textContent = activas.length;
@@ -1977,25 +1992,30 @@ window.pdvIrCierre = function() {
   const zBsEl = document.getElementById('pdvZTotalBs');
   if (zBsEl) {
     const bs = bcvBs(totalCobrado);
-    zBsEl.textContent = bs ? `≈ ${bs}` : '';
-    zBsEl.style.display = bs ? 'block' : 'none';
+    const bsFmt = bs || (bcvTasa > 0 ? `Bs. ${(totalCobrado * bcvTasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}` : '');
+    zBsEl.textContent = bsFmt ? `≈ ${bsFmt}` : '';
+    zBsEl.style.display = bsFmt ? 'block' : 'none';
   }
 
   const det = document.getElementById('pdvZDetalle');
-  det.innerHTML = activas.length ? activas.map(v => `
+  det.innerHTML = activas.length ? activas.map(v => {
+    const bsVal = bcvTasa > 0 ? ` · Bs.${(v.total * bcvTasa).toLocaleString('es-VE',{minimumFractionDigits:0,maximumFractionDigits:0})}` : '';
+    const itens = v.itens ? v.itens.map(i=>`${i.produto.emoji||''}×${i.qty}`).join(' ') : `${v.cantidad||0}itm`;
+    return `
     <div class="pdv-z-row">
       <span style="font-weight:700;color:var(--green-dark)">${v.serie}</span>
-      <span>${v.itens ? v.itens.map(i=>`${i.produto.emoji}×${i.qty}`).join(' ') : `${v.cantidad||0}itm`}</span>
-      <span style="font-weight:700">$${v.total.toFixed(2)}</span>
-      <span style="color:var(--text3);font-size:11px">${v.hora}</span>
-    </div>`).join('') : '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>';
+      <span style="font-size:11px">${itens}</span>
+      <span style="font-weight:800">$${v.total.toFixed(2)}<span style="font-weight:400;color:var(--text3);font-size:10px">${bsVal}</span></span>
+      <span style="color:var(--text3);font-size:11px">${v.hora || ''}</span>
+    </div>`;
+  }).join('') : '<div style="text-align:center;color:var(--text3);font-size:13px;padding:8px">Sin ventas</div>';
 
   pdvGoScreen('cierre');
 };
 
 async function pdvConfirmarCierre() {
-  const hoy = new Date().toISOString().slice(0,10);
-  const ahora = new Date().toTimeString().slice(0,5);
+  const hoy = localDateStr();
+  const ahora = localTimeStr();
   const ventas = pdvGetVentas().filter(v => v.fecha === hoy);
   const activas = ventas.filter(v => !v.anulada);
   const totalCobrado = activas.reduce((s,v) => s + v.total, 0);
@@ -2114,7 +2134,7 @@ function pedidosGetLocal() { return JSON.parse(localStorage.getItem('pdv_pedidos
 function pedidosSaveLocal(arr) { localStorage.setItem('pdv_pedidos_cache', JSON.stringify(arr)); }
 
 function pedidoNextSerie() {
-  const hoy = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const hoy = localDateStr().replace(/-/g,'');
   const todos = pedidosGetLocal();
   const deSerie = todos.filter(p => p.serie && p.serie.startsWith('P'+hoy));
   const ultimo = deSerie.length;
@@ -2274,8 +2294,8 @@ window.pedidoSalvar = async function() {
   const estado  = document.getElementById('pedidoEstado').value;
   const metodo  = document.getElementById('pedidoMetodo').value;
   const obs     = document.getElementById('pedidoObs').value.trim();
-  const hoy     = new Date().toISOString().slice(0,10);
-  const hora    = new Date().toTimeString().slice(0,5);
+  const hoy     = localDateStr();
+  const hora    = localTimeStr();
   const total   = pedidosCarrinho.reduce((s,i) => s + parseFloat(i.produto.preco)*i.qty, 0);
   const st      = pdvGetState();
 
