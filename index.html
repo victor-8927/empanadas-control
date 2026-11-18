@@ -439,32 +439,51 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 
     <!-- SCREEN: COBRO -->
     <div id="pdv-screen-cobro" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div style="font-size:13px;font-weight:700;color:var(--green)" id="pdvCobroSerie">Serie: —</div>
         <button class="btn-calc" onclick="pdvGoScreen('venta')" style="background:#374151">← Cancelar</button>
       </div>
 
-      <!-- Total a cobrar -->
-      <div class="card" style="padding:16px;text-align:center">
-        <div style="font-size:13px;color:var(--text3)" id="pdvCobroCant">0 itens</div>
-        <div style="font-size:48px;font-weight:900;color:var(--green);margin-top:2px;line-height:1" id="pdvCobroTotal">$0.00</div>
-        <div id="pdvCobroTotalBs" style="font-size:13px;color:var(--text3);margin-top:4px;display:none"></div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px;letter-spacing:.5px">TOTAL A COBRAR</div>
+      <!-- Resumo do ticket -->
+      <div class="card" style="padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">RESUMEN DEL TICKET</div>
+        <div id="pdvCobroResumen" style="display:flex;flex-direction:column;gap:3px;font-size:12px;margin-bottom:8px"></div>
+        <div style="border-top:1px solid var(--border);padding-top:7px;display:flex;justify-content:space-between;align-items:baseline">
+          <div>
+            <span style="font-size:13px;color:var(--text3)" id="pdvCobroCant">0 itens</span>
+            <span id="pdvCobroBcvBadge" style="display:none;margin-left:8px;font-size:11px;color:var(--text3)"></span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:36px;font-weight:900;color:var(--green);line-height:1" id="pdvCobroTotal">$0.00</div>
+            <div id="pdvCobroTotalBs" style="font-size:12px;color:var(--text3);margin-top:2px;display:none"></div>
+          </div>
+        </div>
       </div>
 
       <!-- Tipo de consumo -->
-      <div class="card" style="margin-top:10px;padding:14px 16px">
-        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:8px;letter-spacing:.5px">TIPO DE CONSUMO</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button id="pdvTipoLocal" onclick="pdvSelectTipo('local')" class="pdv-metodo-btn active" style="flex:1;min-width:80px">🏠 En el local</button>
-          <button id="pdvTipoRetirada" onclick="pdvSelectTipo('retirada')" class="pdv-metodo-btn" style="flex:1;min-width:80px">🛍️ Retirada</button>
-          <button id="pdvTipoEntrega" onclick="pdvSelectTipo('entrega')" class="pdv-metodo-btn" style="flex:1;min-width:80px">🛵 Entrega</button>
+      <div class="card" style="margin-bottom:10px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:7px;letter-spacing:.5px">TIPO DE CONSUMO</div>
+        <div style="display:flex;gap:6px">
+          <button id="pdvTipoLocal"    onclick="pdvSelectTipo('local')"    class="pdv-metodo-btn active" style="flex:1">🏠 Local</button>
+          <button id="pdvTipoRetirada" onclick="pdvSelectTipo('retirada')" class="pdv-metodo-btn"        style="flex:1">🛍️ Retirada</button>
+          <button id="pdvTipoEntrega"  onclick="pdvSelectTipo('entrega')"  class="pdv-metodo-btn"        style="flex:1">🛵 Entrega</button>
+        </div>
+      </div>
+
+      <!-- Método de pago -->
+      <div class="card" style="margin-bottom:10px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:7px;letter-spacing:.5px">MÉTODO DE PAGO</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <button id="pdvMetEfectivo"    onclick="pdvSelectMetodo('efectivo')"    class="pdv-metodo-btn active">💵 Efectivo</button>
+          <button id="pdvMetDebito"      onclick="pdvSelectMetodo('debito')"      class="pdv-metodo-btn">💳 T. Débito</button>
+          <button id="pdvMetTransfer"    onclick="pdvSelectMetodo('transferencia')" class="pdv-metodo-btn">📲 Transferencia</button>
+          <button id="pdvMetBs"          onclick="pdvSelectMetodo('efectivo_bs')" class="pdv-metodo-btn">🇻🇪 Bs. Efectivo</button>
         </div>
       </div>
 
       <!-- Monto recibido -->
-      <div class="card" id="pdvCobroMontoCard" style="margin-top:10px;padding:14px 16px">
-        <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:6px;letter-spacing:.5px">MONTO RECIBIDO</div>
+      <div class="card" id="pdvCobroMontoCard" style="margin-bottom:10px;padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px;letter-spacing:.5px">MONTO RECIBIDO</div>
         <input id="pdvMontoRecibido" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01"
           class="input-field" style="font-size:22px;font-weight:900;text-align:right;padding:10px 14px"
           oninput="pdvCalcCambio()">
@@ -475,7 +494,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <div id="pdvCobroCambioBs" style="text-align:right;font-size:11px;color:var(--text3);display:none"></div>
       </div>
 
-      <button class="btn-save" onclick="pdvConfirmarVenta()" style="margin-top:16px;font-size:18px;padding:16px">✅ Confirmar Venta</button>
+      <button class="btn-save" onclick="pdvConfirmarVenta()" style="font-size:18px;padding:16px">✅ Confirmar Venta</button>
     </div>
 
     <!-- SCREEN: RECIBO -->
@@ -537,9 +556,12 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 
         <div style="border-top:1px dashed #999;margin:6px 0"></div>
 
-        <!-- TIPO CONSUMO / PAGO / CAMBIO -->
+        <!-- TIPO CONSUMO / MÉTODO PAGO / PAGO / CAMBIO -->
         <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
           <span>TIPO</span><span id="pdvRMetodo" style="font-weight:700">CONSUMO EN EL LOCAL</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
+          <span>PAGO</span><span id="pdvRMetodoPago" style="font-weight:700">EFECTIVO USD</span>
         </div>
         <div id="pdvRPagoLine" style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0">
           <span>MONTO RECIBIDO</span><span id="pdvRPago">—</span>
@@ -1505,12 +1527,22 @@ async function pdvAbrirCaja() {
 }
 
 let pdvTipoConsumo = 'local';
+let pdvMetodoPago = 'efectivo';
 
 window.pdvSelectTipo = function(tipo) {
   pdvTipoConsumo = tipo;
-  document.querySelectorAll('.pdv-metodo-btn').forEach(b => b.classList.remove('active'));
   const map = { local:'pdvTipoLocal', retirada:'pdvTipoRetirada', entrega:'pdvTipoEntrega' };
+  ['pdvTipoLocal','pdvTipoRetirada','pdvTipoEntrega'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
   document.getElementById(map[tipo])?.classList.add('active');
+};
+
+window.pdvSelectMetodo = function(metodo) {
+  pdvMetodoPago = metodo;
+  const map = { efectivo:'pdvMetEfectivo', debito:'pdvMetDebito', transferencia:'pdvMetTransfer', efectivo_bs:'pdvMetBs' };
+  Object.values(map).forEach(id => document.getElementById(id)?.classList.remove('active'));
+  document.getElementById(map[metodo])?.classList.add('active');
 };
 
 window.pdvCalcCambio = function() {
@@ -1553,10 +1585,38 @@ function pdvIrCobro() {
     totalBsEl.textContent = `Bs. ${(total * bcvTasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   } else if (totalBsEl) { totalBsEl.style.display = 'none'; }
 
+  // Resumo do ticket
+  const resumenEl = document.getElementById('pdvCobroResumen');
+  if (resumenEl) {
+    resumenEl.innerHTML = pdvCarrinho.map(i => {
+      const p = parseFloat(i.produto.preco);
+      const sub = p * i.qty;
+      return `<div style="display:grid;grid-template-columns:24px 1fr auto auto;gap:4px;align-items:baseline">
+        <span style="color:var(--text3)">${i.qty}x</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${i.produto.emoji} ${i.produto.nome}</span>
+        <span style="color:var(--text3);font-size:11px">$${p.toFixed(2)}</span>
+        <span style="font-weight:700;text-align:right">$${sub.toFixed(2)}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Tasa BCV badge
+  const bcvBadge = document.getElementById('pdvCobroBcvBadge');
+  if (bcvBadge) {
+    if (bcvTasa) { bcvBadge.style.display = 'inline'; bcvBadge.textContent = `· Tasa BCV: Bs. ${bcvTasa.toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+    else { bcvBadge.style.display = 'none'; }
+  }
+
   // Reset tipo de consumo
   pdvTipoConsumo = 'local';
-  document.querySelectorAll('.pdv-metodo-btn').forEach(b => b.classList.remove('active'));
+  ['pdvTipoLocal','pdvTipoRetirada','pdvTipoEntrega'].forEach(id => document.getElementById(id)?.classList.remove('active'));
   document.getElementById('pdvTipoLocal')?.classList.add('active');
+
+  // Reset método de pago
+  pdvMetodoPago = 'efectivo';
+  ['pdvMetEfectivo','pdvMetDebito','pdvMetTransfer','pdvMetBs'].forEach(id => document.getElementById(id)?.classList.remove('active'));
+  document.getElementById('pdvMetEfectivo')?.classList.add('active');
+
   const montoInput = document.getElementById('pdvMontoRecibido');
   if (montoInput) montoInput.value = '';
   document.getElementById('pdvCobroCambio').textContent = '—';
@@ -1580,6 +1640,7 @@ async function pdvConfirmarVenta() {
     ? parseFloat((pago_recibido - total).toFixed(2)) : 0;
 
   const tipoLabel = { local:'CONSUMO EN EL LOCAL', retirada:'RETIRADA EN EL LOCAL', entrega:'ENTREGA AL CLIENTE' };
+  const metodolabel = { efectivo:'EFECTIVO USD', debito:'TARJETA DÉBITO', transferencia:'TRANSFERENCIA', efectivo_bs:'EFECTIVO BS.' };
 
   const venta = {
     serie: pending.serie, fecha: hoy, hora: ahora,
@@ -1588,6 +1649,7 @@ async function pdvConfirmarVenta() {
     cantidad: pending.itens.reduce((s,i) => s + i.qty, 0),
     total,
     tipo_consumo: pdvTipoConsumo,
+    metodo_pago: pdvMetodoPago,
     pago_recibido, cambio,
     tasa_bcv: bcvTasa || null,
     total_bs: bcvTasa ? parseFloat((total * bcvTasa).toFixed(2)) : null,
@@ -1652,8 +1714,10 @@ async function pdvConfirmarVenta() {
     document.getElementById('pdvRTotalBs').textContent = `Bs. ${(total * bcvTasa).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   } else if (bcvLineEl) { bcvLineEl.style.display = 'none'; }
 
-  // Tipo de consumo / Pago / Cambio
+  // Tipo de consumo + Método de pago / Pago / Cambio
   document.getElementById('pdvRMetodo').textContent = tipoLabel[pdvTipoConsumo] || pdvTipoConsumo.toUpperCase();
+  const rMetodoPagoEl = document.getElementById('pdvRMetodoPago');
+  if (rMetodoPagoEl) rMetodoPagoEl.textContent = metodolabel[pdvMetodoPago] || pdvMetodoPago.toUpperCase();
   const pagoLineEl = document.getElementById('pdvRPagoLine');
   const cambioLineEl = document.getElementById('pdvRCambioLine');
   if (pago_recibido !== null && pago_recibido > 0) {
