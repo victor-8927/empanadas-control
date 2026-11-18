@@ -241,6 +241,8 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
       <span class="meta-badge" id="metaBadgeDia" style="background:#fef3c7;color:#92400e;display:none">⚠️ Meta hoy: <span id="metaBadgeVal">100</span></span>
     </div>
 
+    <div id="hoyPdvBadge" style="display:none;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #6ee7b7;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;margin-bottom:10px">🔄 PDV: 0 empanadas</div>
+
     <div class="card">
       <div class="card-title">Registro del Día</div>
       <div class="plan-real-grid">
@@ -1022,7 +1024,7 @@ function updateOfflineBadge() {
 // SYNC PDV → HOY
 // Conta empanadas vendidas hoje pelo PDV e atualiza empInput
 // ============================================================
-function hoyAtualizarDoPdv() {
+async function hoyAtualizarDoPdv() {
   const hoj = todayKey();
   const ventas = pdvGetVentas().filter(v => v.fecha === hoj && !v.anulada);
   // Soma qty de itens cuja categoria é empanada (ou nome contém "empanada")
@@ -1031,7 +1033,6 @@ function hoyAtualizarDoPdv() {
     for (const item of (v.itens || [])) {
       const cat = item.produto?.categoria || '';
       const nome = (item.produto?.nome || '').toLowerCase();
-      // Conta apenas empanadas (não bebidas, não outros)
       if (cat === 'empanada' || nome.includes('empanada')) {
         totalEmp += item.qty || 0;
       }
@@ -1039,28 +1040,67 @@ function hoyAtualizarDoPdv() {
   }
 
   const input = document.getElementById('empInput');
-  if (!input) return;
-
-  if (totalEmp > 0) {
-    input.value = totalEmp;
-    input.style.background = 'var(--green-light)';
-    input.style.borderColor = 'var(--green)';
-    input.readOnly = false; // permite ajuste manual se necessário
-    // Atualiza badge informativo
-    const lbl = document.getElementById('empInputLabel');
-    if (lbl) lbl.textContent = `Auto PDV: ${totalEmp} emp. · ajuste manual permitido`;
-  } else {
-    input.style.background = '';
-    input.style.borderColor = '';
-    const lbl = document.getElementById('empInputLabel');
-    if (lbl) lbl.textContent = 'Empanadas vendidas hoy';
+  if (input) {
+    input.value = totalEmp > 0 ? totalEmp : '';
+    input.style.background = totalEmp > 0 ? 'var(--green-light)' : '';
+    input.style.borderColor = totalEmp > 0 ? 'var(--green)' : '';
   }
 
-  // Recalcula visualmente sem salvar
+  // Atualiza label e badge PDV
+  const lbl = document.getElementById('empInputLabel');
+  const pdvBadge = document.getElementById('hoyPdvBadge');
+  if (totalEmp > 0) {
+    if (lbl) lbl.textContent = `Ajuste manual (PDV: ${totalEmp} emp.)`;
+    if (pdvBadge) { pdvBadge.style.display = 'inline-flex'; pdvBadge.textContent = `🔄 PDV: ${totalEmp} empanadas`; }
+  } else {
+    if (lbl) lbl.textContent = 'Empanadas vendidas hoy';
+    if (pdvBadge) pdvBadge.style.display = 'none';
+  }
+
+  // Recalcula UI
   const d = getCache();
   const meta = calcMetaHoy(d.registros);
   renderMetaHoyUI(meta);
   renderCalc(calcLogic(totalEmp, meta));
+
+  // ── Auto-salva registro de hoje no cache e Supabase ──────────
+  if (totalEmp > 0) {
+    const c = calcLogic(totalEmp, meta);
+    const row = {
+      fecha: hoj, cantidad: c.cantidad,
+      insumos: c.insumos, sueldos: c.sueldos, capital: c.capital,
+      inversor: c.inversor, lucro_base: c.lucro_base,
+      excedente: c.excedente, lucro_total_dueno: c.lucro_total_dueno, pct: c.pct,
+      meta_dia: meta
+    };
+    // Salva local
+    const dc = getCache();
+    dc.registros = dc.registros.filter(r => r.fecha !== hoj);
+    dc.registros.unshift(row);
+    dc.registros.sort((a,b) => b.fecha.localeCompare(a.fecha));
+    saveCache(dc);
+    renderAmort();
+    // Atualiza botão
+    const btn = document.getElementById('btnSave');
+    if (btn) btn.textContent = '✏️ Ajustar Manualmente';
+    // Supabase async (não bloqueia UI)
+    if (isOnline) {
+      try { await sb.upsert(row); } catch(e) {
+        const dq = getCache();
+        dq.queue = (dq.queue || []).filter(q => !(q.op === 'upsert' && q.row.fecha === hoj));
+        dq.queue.push({ op: 'upsert', row });
+        saveCache(dq);
+      }
+    } else {
+      const dq = getCache();
+      dq.queue = (dq.queue || []).filter(q => !(q.op === 'upsert' && q.row.fecha === hoj));
+      dq.queue.push({ op: 'upsert', row });
+      saveCache(dq);
+    }
+  } else {
+    const btn = document.getElementById('btnSave');
+    if (btn) btn.textContent = '💾 Registrar Jornada de Hoy';
+  }
 }
 window.hoyAtualizarDoPdv = hoyAtualizarDoPdv;
 
@@ -1076,7 +1116,20 @@ window.calcular = function() {
 };
 
 window.guardar = async function() {
-  const qty = parseInt(document.getElementById('empInput').value) || 0;
+  const inputVal = parseInt(document.getElementById('empInput').value) || 0;
+  // Se campo vazio, usa contagem PDV do dia como base
+  const hojFallback = todayKey();
+  let pdvQtyFallback = 0;
+  if (inputVal === 0) {
+    for (const v of pdvGetVentas().filter(v => v.fecha === hojFallback && !v.anulada)) {
+      for (const item of (v.itens || [])) {
+        const cat = item.produto?.categoria || '';
+        const nome = (item.produto?.nome || '').toLowerCase();
+        if (cat === 'empanada' || nome.includes('empanada')) pdvQtyFallback += item.qty || 0;
+      }
+    }
+  }
+  const qty = inputVal || pdvQtyFallback;
   if (qty === 0) { showToast('⚠️ Ingresa las empanadas vendidas'); return; }
 
   const btn = document.getElementById('btnSave');
