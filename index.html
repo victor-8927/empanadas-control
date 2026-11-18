@@ -1217,27 +1217,72 @@ window.renderResumen = function() {
   const d = getCache();
   const { y, m } = resumenMes;
   const prefix = `${y}-${String(m+1).padStart(2,'0')}`;
-  const regs = d.registros.filter(r => r.fecha.startsWith(prefix));
   const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   document.getElementById('monthName').textContent = MONTHS[m] + ' ' + y;
-  const dias = regs.length;
-  const diasMeta = regs.filter(r => r.cantidad >= META).length;
-  const totalEmps = regs.reduce((s,r) => s + r.cantidad, 0);
+
+  // Registros manuais do mês
+  const regsManual = d.registros.filter(r => r.fecha.startsWith(prefix));
+
+  // ── Mesclar com vendas PDV ────────────────────────────────────
+  // Agrupa vendas PDV por fecha (apenas não anuladas)
+  const todasVentas = pdvGetVentas().filter(v => !v.anulada && v.fecha && v.fecha.startsWith(prefix));
+  const pdvPorDia = {};
+  for (const v of todasVentas) {
+    if (!pdvPorDia[v.fecha]) pdvPorDia[v.fecha] = 0;
+    // conta empanadas (categoria empanada)
+    for (const item of (v.itens || [])) {
+      const cat = item.produto?.categoria || '';
+      const nome = (item.produto?.nome || '').toLowerCase();
+      if (cat === 'empanada' || nome.includes('empanada')) {
+        pdvPorDia[v.fecha] += item.qty || 0;
+      }
+    }
+  }
+
+  // Para dias sem registro manual mas com vendas PDV → cria registro sintético
+  const fechasManuais = new Set(regsManual.map(r => r.fecha));
+  const regsSinteticos = [];
+  for (const [fecha, qty] of Object.entries(pdvPorDia)) {
+    if (!fechasManuais.has(fecha) && qty > 0) {
+      const metaDia = calcMetaHoy([...d.registros, ...regsSinteticos].filter(r => r.fecha < fecha));
+      const c = calcLogic(qty, metaDia);
+      regsSinteticos.push({ fecha, cantidad: qty, inversor: c.inversor, lucro_total_dueno: c.lucro_total_dueno, capital: c.capital, _pdv: true });
+    }
+  }
+
+  // Para dias com registro manual, substituir cantidad pelo PDV se maior
+  const regs = regsManual.map(r => {
+    const pdvQty = pdvPorDia[r.fecha] || 0;
+    if (pdvQty > r.cantidad) {
+      const metaDia = calcMetaHoy(d.registros.filter(rx => rx.fecha < r.fecha));
+      const c = calcLogic(pdvQty, metaDia);
+      return { ...r, cantidad: pdvQty, inversor: c.inversor, lucro_total_dueno: c.lucro_total_dueno, _pdv_override: true };
+    }
+    return r;
+  });
+
+  // Combina e ordena
+  const todosRegs = [...regs, ...regsSinteticos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  const dias = todosRegs.length;
+  const diasMeta = todosRegs.filter(r => r.cantidad >= META).length;
+  const totalEmps = todosRegs.reduce((s,r) => s + r.cantidad, 0);
   const avg = dias ? Math.round(totalEmps / dias) : 0;
-  const tuTotal = regs.reduce((s,r) => s + parseFloat(r.inversor), 0);
-  const duenoTotal = regs.reduce((s,r) => s + parseFloat(r.lucro_total_dueno), 0);
+  const tuTotal = todosRegs.reduce((s,r) => s + parseFloat(r.inversor), 0);
+  const duenoTotal = todosRegs.reduce((s,r) => s + parseFloat(r.lucro_total_dueno), 0);
   document.getElementById('sDias').textContent = dias;
   document.getElementById('sMeta').textContent = diasMeta;
   document.getElementById('sEmps').textContent = totalEmps;
   document.getElementById('sAvg').textContent = avg;
   document.getElementById('sTuTotal').textContent = '$' + tuTotal.toFixed(2);
   document.getElementById('sDuenoTotal').textContent = '$' + duenoTotal.toFixed(2);
+  // Amortização: usa apenas registros reais (manuais) para capital acumulado
   const pagado = capitalAcumulado(d.registros);
   const pct = Math.min((pagado / CAPITAL_TOTAL) * 100, 100);
   document.getElementById('sAmortFill').style.width = pct + '%';
   document.getElementById('sAmortPago').textContent = '$' + pagado.toFixed(2) + ' acumulados';
   document.getElementById('sAmortPct').textContent = pct.toFixed(0) + '% de $' + CAPITAL_TOTAL;
-  renderBarChart(d.registros.slice(0, 15));
+  renderBarChart(todosRegs.slice(-15));
 };
 
 function renderBarChart(regs) {
