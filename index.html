@@ -1300,20 +1300,43 @@ let bcvTasa = parseFloat(localStorage.getItem('bcv_tasa') || '0');
 let bcvFecha = localStorage.getItem('bcv_fecha') || '';
 
 async function bcvFetch() {
-  try {
-    const r = await fetch('https://bcv.today/api/rate.json', { cache: 'no-store' });
-    if (!r.ok) throw new Error();
-    const d = await r.json();
-    // Formato: { date: "2026-11-17", rates: { USD: 890.98, EUR: ... } }
-    const tasa = d.rates?.USD || d.USD || d.usd;
-    if (tasa && tasa > 0) {
-      bcvTasa = parseFloat(tasa);
-      bcvFecha = d.date || new Date().toISOString().slice(0,10);
-      localStorage.setItem('bcv_tasa', bcvTasa);
-      localStorage.setItem('bcv_fecha', bcvFecha);
-      bcvRenderUI();
+  // Endpoints en orden de preferencia (fallback encadenado)
+  const ENDPOINTS = [
+    {
+      url: 'https://allratestoday.com/api/open/central-bank/bcv',
+      parse: d => {
+        // { rates: [ { source:"USD", target:"VES", rate:890.98, rate_date:"2026-11-17" }, ... ] }
+        const usd = (d.rates || []).find(r => r.source === 'USD' || r.target === 'VES' && r.source === 'USD');
+        const any = (d.rates || []).find(r => (r.source||'').toUpperCase()==='USD');
+        const item = usd || any;
+        return item ? { tasa: parseFloat(item.rate), fecha: item.rate_date || '' } : null;
+      }
+    },
+    {
+      url: 'https://bcv-api.rafnixg.dev/v1/rates/latest',
+      parse: d => {
+        const usd = d?.USD || d?.usd || d?.rates?.USD;
+        return usd ? { tasa: parseFloat(usd), fecha: d.date || d.fecha || '' } : null;
+      }
     }
-  } catch { /* usa cache local se offline */ }
+  ];
+  for (const ep of ENDPOINTS) {
+    try {
+      const r = await fetch(ep.url, { cache: 'no-store' });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const result = ep.parse(d);
+      if (result && result.tasa > 0) {
+        bcvTasa = result.tasa;
+        bcvFecha = result.fecha || new Date().toISOString().slice(0,10);
+        localStorage.setItem('bcv_tasa', bcvTasa);
+        localStorage.setItem('bcv_fecha', bcvFecha);
+        bcvRenderUI();
+        return;
+      }
+    } catch { /* tenta próximo */ }
+  }
+  /* todos falharam — usa cache local se disponível */
 }
 
 function bcvBs(usd) {
