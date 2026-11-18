@@ -2195,6 +2195,8 @@ async function cardapioLoad() {
   cardapioRender();
 }
 
+let cardapioExpandido = null; // id do produto expandido
+
 function cardapioRender() {
   const lista = document.getElementById('cardapioLista');
   if (!lista) return;
@@ -2202,17 +2204,133 @@ function cardapioRender() {
     lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px">Nenhum produto. Clique em + Produto para começar.</div>';
     return;
   }
-  lista.innerHTML = pdvProdutos.map(p => `
-    <div class="cardapio-item${p.ativo?'':' inativo'}" onclick="cardapioAbrirModal(${JSON.stringify(JSON.stringify(p))})">
-      <span style="font-size:24px">${p.emoji}</span>
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:14px">${p.nome}</div>
-        <div style="font-size:11px;color:var(--text3)">${{empanada:'Empanada',bebida:'Bebida',outro:'Outro'}[p.categoria]||p.categoria}${p.ativo?'':' · Inativo'}</div>
+  const catLabel = { empanada:'Empanada', bebida:'Bebida', outro:'Outro' };
+  lista.innerHTML = pdvProdutos.map(p => {
+    const isOpen = cardapioExpandido === p.id;
+    const catBtns = ['empanada','bebida','outro'].map(c =>
+      `<button class="btn-calc ccat-inline" data-pid="${p.id}" data-c="${c}"
+        onclick="cardapioInlineSelCat('${p.id}','${c}')"
+        style="flex:1;font-size:11px;padding:6px 4px;${p.categoria===c?'background:var(--green);color:#fff;':'background:#374151;color:var(--text2);'}"
+      >${{empanada:'🫓 Emp.',bebida:'🥤 Beb.',outro:'📦 Outro'}[c]}</button>`
+    ).join('');
+    return `
+    <div class="card" style="padding:0;overflow:hidden;opacity:${p.ativo?1:.55}">
+      <!-- linha resumo -->
+      <div onclick="cardapioToggle('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
+        <span style="font-size:24px">${p.emoji}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.nome}</div>
+          <div style="font-size:11px;color:var(--text3)">${catLabel[p.categoria]||p.categoria}${p.ativo?'':' · Inativo'}</div>
+        </div>
+        <span style="font-weight:800;color:var(--green-dark);font-size:15px;white-space:nowrap">$${parseFloat(p.preco).toFixed(2)}</span>
+        <span style="font-size:16px;color:var(--text3);transition:transform .2s;${isOpen?'transform:rotate(90deg)':''}">›</span>
       </div>
-      <span style="font-weight:800;color:var(--green-dark);font-size:15px">$${parseFloat(p.preco).toFixed(2)}</span>
-      <span style="font-size:18px;color:var(--text3)">›</span>
-    </div>`).join('');
+      <!-- painel inline editável -->
+      <div id="cinline-${p.id}" style="display:${isOpen?'block':'none'};border-top:1px solid var(--border);padding:12px 14px;background:var(--gray-light)">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:0 0 60px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">EMOJI</div>
+            <input id="ci-emoji-${p.id}" value="${p.emoji}" maxlength="4"
+              class="input-field" style="font-size:20px;text-align:center;padding:6px 4px">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">NOME</div>
+            <input id="ci-nome-${p.id}" value="${p.nome}"
+              class="input-field" style="font-size:14px;padding:8px 10px">
+          </div>
+          <div style="flex:0 0 72px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:3px">PREÇO $</div>
+            <input id="ci-preco-${p.id}" type="number" value="${p.preco}" min="0" step="0.01" inputmode="decimal"
+              class="input-field" style="font-size:15px;font-weight:800;padding:8px 6px;text-align:right">
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">${catBtns}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <label style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="ci-ativo-${p.id}" ${p.ativo?'checked':''} style="width:18px;height:18px">
+            Ativo no PDV
+          </label>
+          <label style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px">
+            Ordem
+            <input id="ci-ordem-${p.id}" type="number" value="${p.ordem??99}" min="0"
+              class="input-field" style="width:52px;padding:4px 6px;font-size:13px">
+          </label>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="cardapioInlineExcluir('${p.id}')"
+            style="flex:0 0 42px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:10px;font-size:16px;cursor:pointer">🗑️</button>
+          <button onclick="cardapioToggle('${p.id}')"
+            style="flex:1;padding:10px;background:#374151;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Cancelar</button>
+          <button onclick="cardapioInlineSalvar('${p.id}')"
+            style="flex:2;padding:10px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">💾 Salvar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
+
+window.cardapioToggle = function(id) {
+  cardapioExpandido = cardapioExpandido === id ? null : id;
+  cardapioRender();
+};
+
+window.cardapioInlineSelCat = function(pid, cat) {
+  // Atualiza visual dos botões sem re-render completo
+  document.querySelectorAll(`.ccat-inline[data-pid="${pid}"]`).forEach(b => {
+    const sel = b.dataset.c === cat;
+    b.style.background = sel ? 'var(--green)' : '#374151';
+    b.style.color = sel ? '#fff' : 'var(--text2)';
+  });
+  // Guarda no elemento hidden para leitura no salvar
+  const panel = document.getElementById(`cinline-${pid}`);
+  if (panel) panel.dataset.cat = cat;
+};
+
+window.cardapioInlineSalvar = async function(id) {
+  const nome  = document.getElementById(`ci-nome-${id}`)?.value.trim();
+  const emoji = document.getElementById(`ci-emoji-${id}`)?.value.trim() || '🫓';
+  const preco = parseFloat(document.getElementById(`ci-preco-${id}`)?.value);
+  const ordem = parseInt(document.getElementById(`ci-ordem-${id}`)?.value) || 99;
+  const ativo = document.getElementById(`ci-ativo-${id}`)?.checked ?? true;
+  const panel = document.getElementById(`cinline-${id}`);
+  // Categoria: lê do dataset (após clique) ou do botão ativo
+  let categoria = panel?.dataset.cat;
+  if (!categoria) {
+    const btn = panel?.querySelector('.ccat-inline[style*="var(--green)"]');
+    categoria = btn?.dataset.c || 'empanada';
+  }
+
+  if (!nome) { showToast('⚠️ Nome é obrigatório'); return; }
+  if (isNaN(preco) || preco < 0) { showToast('⚠️ Preço inválido'); return; }
+
+  const payload = { nome, emoji, preco, categoria, ordem, ativo };
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?id=eq.${id}`, {
+      method: 'PATCH', headers: PDV_SH, body: JSON.stringify(payload)
+    });
+    if (r.ok) {
+      showToast('✅ Salvo');
+      cardapioExpandido = null;
+      await cardapioLoad();
+      pdvCarregarProdutos();
+    } else { showToast('❌ Erro ao salvar'); }
+  } catch { showToast('❌ Sem conexão'); }
+};
+
+window.cardapioInlineExcluir = async function(id) {
+  if (!confirm('Excluir produto permanentemente?')) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_produtos?id=eq.${id}`, {
+      method: 'DELETE', headers: PDV_SH
+    });
+    if (r.ok) {
+      showToast('🗑️ Excluído');
+      cardapioExpandido = null;
+      await cardapioLoad();
+      pdvCarregarProdutos();
+    } else { showToast('❌ Erro ao excluir'); }
+  } catch { showToast('❌ Sem conexão'); }
+};
 
 window.cardapioAbrirModal = function(prodJson) {
   const prod = prodJson ? JSON.parse(prodJson) : null;
