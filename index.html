@@ -1476,6 +1476,31 @@ async function bcvFetch() {
   /* todos falharam — usa cache local se disponível */
 }
 
+// Busca nova tasa apenas se necessário:
+// - nunca foi buscada (bcvTasa === 0)
+// - data armazenada é diferente de hoje (virou o dia)
+// - última busca foi há mais de 4 horas (tasa pode ter sido atualizada pelo BCV)
+async function bcvFetchSeNecessario() {
+  const hoje = localDateStr();
+  const ultimaBusca = parseInt(localStorage.getItem('bcv_fetch_ts') || '0');
+  const agoraMs = Date.now();
+  const quatroHoras = 4 * 60 * 60 * 1000;
+  const dataDesatualizada = bcvFecha && !bcvFecha.startsWith(hoje);
+  const semTasa = !bcvTasa || bcvTasa <= 0;
+  const expirou = (agoraMs - ultimaBusca) > quatroHoras;
+
+  if (semTasa || dataDesatualizada || expirou) {
+    await bcvFetch();
+    localStorage.setItem('bcv_fetch_ts', String(agoraMs));
+  } else {
+    // Mesmo sem buscar, renderiza o badge com o valor em cache
+    bcvRenderUI();
+  }
+}
+
+// Verificação automática a cada hora (se app ficar aberto overnight)
+setInterval(() => { bcvFetchSeNecessario(); }, 60 * 60 * 1000);
+
 function bcvBs(usd) {
   if (!bcvTasa) return '';
   return 'Bs. ' + (usd * bcvTasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1689,7 +1714,7 @@ window.pdvLimparCarrinho = function() {
 };
 
 function pdvInit() {
-  bcvFetch();
+  bcvFetchSeNecessario();
   if (isOnline) pdvCarregarProdutos();
   else pdvRenderCatalogo();
 
@@ -2107,7 +2132,7 @@ async function init() {
     await fetchAll();
     renderHistorial(); renderResumen(); renderAmort(); updateOfflineBadge();
     // Atualiza tasa BCV ao reconectar
-    bcvFetch();
+    bcvFetchSeNecessario();
   });
   window.addEventListener('offline', () => {
     isOnline = false; setSyncState('offline'); updateOfflineBadge();
