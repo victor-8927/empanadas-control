@@ -442,39 +442,13 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <button class="btn-calc" onclick="pdvGoScreen('venta')" style="background:#374151">← Cancelar</button>
       </div>
 
-      <div class="card" style="padding:14px 16px">
-        <div id="pdvCobroItemsList" style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:13px"></div>
-        <div style="border-top:1px dashed var(--border);padding-top:8px;text-align:center">
-          <div style="font-size:14px;color:var(--text3)" id="pdvCobroCant">0 itens</div>
-          <div style="font-size:44px;font-weight:900;color:var(--green);margin-top:2px" id="pdvCobroTotal">$0.00</div>
-          <div style="font-size:12px;color:var(--text3)">TOTAL A COBRAR</div>
-        </div>
+      <div class="card" style="padding:20px 16px;text-align:center">
+        <div style="font-size:14px;color:var(--text3)" id="pdvCobroCant">0 itens</div>
+        <div style="font-size:56px;font-weight:900;color:var(--green);margin-top:4px;line-height:1" id="pdvCobroTotal">$0.00</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;letter-spacing:.5px">TOTAL A COBRAR</div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Monto recibido</div>
-        <input class="input-field" id="pdvPagoInput" type="number" placeholder="0.00" min="0" step="0.01" inputmode="decimal" style="font-size:28px;font-weight:800;text-align:center" oninput="pdvCalcCambio()">
-        <div id="pdvCambioBox" style="display:none;background:#ecfdf5;border:1px solid #d1fae5;border-radius:12px;padding:12px 16px;display:none;justify-content:space-between;align-items:center;margin-top:8px">
-          <span style="font-size:13px;color:var(--green);font-weight:700">💰 Cambio</span>
-          <span style="font-size:22px;font-weight:900;color:var(--green)" id="pdvCambioVal">$0.00</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Cobro rápido</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="pdvQuickPay"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Método de Pago</div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-calc pdv-metodo active-metodo" data-m="efectivo" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px">💵 Efectivo</button>
-          <button class="btn-calc pdv-metodo" data-m="transferencia" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px;background:#374151">📲 Transfer.</button>
-          <button class="btn-calc pdv-metodo" data-m="otro" onclick="pdvSelMetodo(this)" style="flex:1;font-size:13px;padding:9px;background:#374151">Otro</button>
-        </div>
-      </div>
-
-      <button class="btn-save" onclick="pdvConfirmarVenta()">✅ Confirmar Venta</button>
+      <button class="btn-save" onclick="pdvConfirmarVenta()" style="margin-top:16px;font-size:18px;padding:16px">✅ Confirmar Venta</button>
     </div>
 
     <!-- SCREEN: RECIBO -->
@@ -496,10 +470,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
         <div style="border-top:1px dashed var(--border);margin:8px 0"></div>
         <div id="pdvRItens" style="display:flex;flex-direction:column;gap:1px"></div>
         <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;border-top:2px solid var(--border);padding-top:8px;margin-top:4px"><span>TOTAL</span><span id="pdvRTotal">$0.00</span></div>
-        <div id="pdvRBcvLine" style="display:none;justify-content:space-between;font-size:11px;padding:2px 0;color:#92400e;background:#fefce8;border-radius:4px;padding:3px 6px;margin:2px 0"></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Pagó</span><span id="pdvRPago">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--green);font-weight:700"><span>Cambio</span><span id="pdvRCambio">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Método</span><span id="pdvRMetodo">Efectivo</span></div>
+        <div id="pdvRBcvLine" style="display:none"></div>
         <div style="text-align:center;border-top:2px dashed var(--border);padding-top:12px;margin-top:12px;font-size:11px;color:var(--text3)">¡Gracias por su compra!<br>Vuelva pronto 🫓</div>
       </div>
 
@@ -1459,75 +1430,18 @@ function pdvIrCobro() {
   const count = pdvTotalItensCarrinho();
 
   document.getElementById('pdvCobroSerie').textContent = `Serie: ${serie}`;
-  // Lista de itens no cobro
-  const listEl = document.getElementById('pdvCobroItemsList');
-  if (listEl) {
-    listEl.innerHTML = pdvCarrinho.map(i =>
-      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">
-        <span>${i.produto.emoji} ${i.produto.nome} ×${i.qty}</span>
-        <span>$${(parseFloat(i.produto.preco)*i.qty).toFixed(2)}</span>
-       </div>`
-    ).join('');
-  }
   document.getElementById('pdvCobroCant').textContent = `${count} item${count>1?'s':''}`;
-  const bs = bcvBs(total);
-  document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}` + (bs ? ` · ${bs}` : '');
-  document.getElementById('pdvCobroTotal').title = bs ? `Equivale a ${bs}` : '';
-  document.getElementById('pdvPagoInput').value = '';
-  document.getElementById('pdvCambioBox').style.display = 'none';
-
-  // Quick pay buttons
-  const qp = document.getElementById('pdvQuickPay');
-  qp.innerHTML = '';
-  [total, Math.ceil(total), 5, 10, 20].filter((v,i,a) => a.indexOf(v)===i && v >= total).slice(0,4).forEach(v => {
-    const b = document.createElement('button');
-    b.className = 'btn-calc';
-    b.style.cssText = 'flex:1;min-width:60px;padding:9px;font-size:13px;background:#374151';
-    b.textContent = `$${v.toFixed(2)}`;
-    b.onclick = () => { document.getElementById('pdvPagoInput').value = v.toFixed(2); pdvCalcCambio(); };
-    qp.appendChild(b);
-  });
-
-  // Reset método
-  document.querySelectorAll('.pdv-metodo').forEach(b => {
-    b.classList.toggle('active-metodo', b.dataset.m === 'efectivo');
-    b.style.background = b.dataset.m === 'efectivo' ? '' : '#374151';
-  });
-  pdvMetodo = 'efectivo';
+  document.getElementById('pdvCobroTotal').textContent = `$${total.toFixed(2)}`;
 
   // Guarda carrinho no sessionStorage para confirmarVenta
   sessionStorage.setItem('pdv_pending', JSON.stringify({ serie, itens: pdvCarrinho, total }));
   pdvGoScreen('cobro');
 }
 
-window.pdvCalcCambio = function() {
-  const pago = parseFloat(document.getElementById('pdvPagoInput').value) || 0;
-  const pending = JSON.parse(sessionStorage.getItem('pdv_pending') || '{}');
-  const total = pending.total || 0;
-  const cambio = pago - total;
-  const box = document.getElementById('pdvCambioBox');
-  if (pago >= total && pago > 0) {
-    box.style.display = 'flex';
-    document.getElementById('pdvCambioVal').textContent = `$${cambio.toFixed(2)}`;
-  } else {
-    box.style.display = 'none';
-  }
-};
-
-window.pdvSelMetodo = function(btn) {
-  document.querySelectorAll('.pdv-metodo').forEach(b => { b.classList.remove('active-metodo'); b.style.background = '#374151'; });
-  btn.classList.add('active-metodo');
-  btn.style.background = '';
-  pdvMetodo = btn.dataset.m;
-};
-
 async function pdvConfirmarVenta() {
-  const pago = parseFloat(document.getElementById('pdvPagoInput').value) || 0;
   const pending = JSON.parse(sessionStorage.getItem('pdv_pending') || '{}');
   if (!pending.serie) { showToast('⚠️ Error: recarga y vuelve a intentar'); return; }
-  if (pago < pending.total) { showToast('⚠️ Monto insuficiente'); return; }
 
-  const cambio = pago - pending.total;
   const hoy = new Date().toISOString().slice(0,10);
   const ahora = new Date().toTimeString().slice(0,5);
   const st = pdvGetState();
@@ -1538,9 +1452,7 @@ async function pdvConfirmarVenta() {
     itens: pending.itens,
     cantidad: pending.itens.reduce((s,i) => s + i.qty, 0),
     total: pending.total,
-    pago_recibido: pago, cambio, metodo_pago: pdvMetodo,
-    caja_id: st?.cajaId || null, anulada: false,
-    tasa_bcv: bcvTasa || null, total_bs: bcvTasa ? parseFloat((pending.total * bcvTasa).toFixed(2)) : null
+    caja_id: st?.cajaId || null, anulada: false
   };
 
   // Salva local
@@ -1574,16 +1486,8 @@ async function pdvConfirmarVenta() {
     ).join('');
   }
   document.getElementById('pdvRTotal').textContent = `$${pending.total.toFixed(2)}`;
-  document.getElementById('pdvRPago').textContent = `$${pago.toFixed(2)}`;
-  document.getElementById('pdvRCambio').textContent = `$${cambio.toFixed(2)}`;
-  document.getElementById('pdvRMetodo').textContent = { efectivo:'Efectivo', transferencia:'Transferencia', otro:'Otro' }[pdvMetodo] || pdvMetodo;
-  // Equivalência em Bs.
   const reciboTasaEl = document.getElementById('pdvRBcvLine');
-  if (reciboTasaEl) {
-    const bs = bcvBs(pending.total);
-    reciboTasaEl.style.display = bs ? 'flex' : 'none';
-    if (bs) reciboTasaEl.innerHTML = `<span>Total en Bs.</span><span>${bs}</span>`;
-  }
+  if (reciboTasaEl) reciboTasaEl.style.display = 'none';
 
   pdvRenderVentaList();
   pdvGoScreen('recibo');
