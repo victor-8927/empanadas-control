@@ -1301,22 +1301,34 @@ let bcvFecha = localStorage.getItem('bcv_fecha') || '';
 
 async function bcvFetch() {
   // Endpoints en orden de preferencia (fallback encadenado)
+  // EP1: pydolarve.org — API venezolana gratuita, sin clave, monitor BCV oficial
+  // EP2: bcv.today/rate.json — GitHub Pages, scrape directo del BCV, sin clave
+  // EP3: bcv.today/history/FECHA.json — fallback histórico del día actual
+  const hoy = new Date().toISOString().slice(0, 10);
   const ENDPOINTS = [
     {
-      url: 'https://allratestoday.com/api/open/central-bank/bcv',
+      url: 'https://pydolarve.org/api/v1/dollar?monitor=bcv',
       parse: d => {
-        // { rates: [ { source:"USD", target:"VES", rate:890.98, rate_date:"2026-11-17" }, ... ] }
-        const usd = (d.rates || []).find(r => r.source === 'USD' || r.target === 'VES' && r.source === 'USD');
-        const any = (d.rates || []).find(r => (r.source||'').toUpperCase()==='USD');
-        const item = usd || any;
-        return item ? { tasa: parseFloat(item.rate), fecha: item.rate_date || '' } : null;
+        // { price: 890.98, last_update: "2026-11-17T..." }
+        const tasa = parseFloat(d?.price ?? d?.data?.price ?? 0);
+        const fecha = (d?.last_update || d?.data?.last_update || '').slice(0, 10);
+        return tasa > 0 ? { tasa, fecha: fecha || hoy } : null;
       }
     },
     {
-      url: 'https://bcv-api.rafnixg.dev/v1/rates/latest',
+      url: 'https://bcv.today/api/rate.json',
       parse: d => {
-        const usd = d?.USD || d?.usd || d?.rates?.USD;
-        return usd ? { tasa: parseFloat(usd), fecha: d.date || d.fecha || '' } : null;
+        // { "USD": 890.98, "EUR": 997.27, "date": "2026-11-17" }
+        const tasa = parseFloat(d?.USD ?? d?.usd ?? 0);
+        const fecha = (d?.date || '').slice(0, 10);
+        return tasa > 0 ? { tasa, fecha: fecha || hoy } : null;
+      }
+    },
+    {
+      url: `https://bcv.today/api/history/${hoy}.json`,
+      parse: d => {
+        const tasa = parseFloat(d?.USD ?? d?.usd ?? 0);
+        return tasa > 0 ? { tasa, fecha: hoy } : null;
       }
     }
   ];
