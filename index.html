@@ -192,6 +192,15 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
 .cardapio-item{display:flex;align-items:center;gap:10px;padding:11px 12px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb}
 .cardapio-item.inativo{opacity:.45}
 .active-ccat{background:var(--green-dark)!important}
+.pedido-card{background:var(--bg2);border:1px solid #374151;border-radius:14px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.pedido-card:active{border-color:var(--green)}
+.pedido-estado{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.estado-pendiente{background:#78350f;color:#fcd34d}
+.estado-por_despachar{background:#1e3a5f;color:#93c5fd}
+.estado-despachado{background:#14532d;color:#86efac}
+.estado-anulado{background:#3f1f1f;color:#fca5a5;opacity:.6}
+.pedido-filtro-btn{padding:5px 12px;border-radius:20px;border:1px solid #374151;background:transparent;color:var(--text3);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.pedido-filtro-btn.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
 @media print{.header,.nav-tabs,#pdv-screen-venta>div:first-child,#pdvNumpad,.btn-save,.btn-calc,.pdv-anular-btn{display:none!important}.tab-content:not(#tab-pdv){display:none!important}#tab-pdv{display:block!important}#pdv-screen-recibo{display:block!important}}
 </style>
 </head>
@@ -211,6 +220,7 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
     <button class="nav-tab" onclick="setTab('historial',this)">HISTORIAL</button>
     <button class="nav-tab" onclick="setTab('resumen',this)">RESUMEN</button>
     <button class="nav-tab" onclick="setTab('pdv',this)" id="tabPDV" style="color:#34d399;font-weight:800;min-width:50px">PDV 🛒</button>
+    <button class="nav-tab" onclick="setTab('pedidos',this)" id="tabPedidos" style="min-width:50px">📝</button>
     <button class="nav-tab" onclick="setTab('cardapio',this)" id="tabCardapio" style="min-width:50px">📋</button>
   </nav>
 </div>
@@ -536,6 +546,108 @@ main{padding:16px;max-width:480px;margin:0 auto;padding-bottom:32px}
   </div><!-- /tab-pdv -->
 
   <!-- ========== ABA CARDÁPIO ========== -->
+  <!-- ═══════════ ABA PEDIDOS ═══════════ -->
+  <div class="tab-content" id="tab-pedidos">
+
+    <!-- Header + botão novo pedido -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:16px;font-weight:800">📝 Pedidos</div>
+      <button class="btn-save" onclick="pedidoAbrirModal(null)" style="padding:8px 14px;font-size:13px;border-radius:10px">+ Pedido</button>
+    </div>
+
+    <!-- Filtros de estado -->
+    <div style="display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px">
+      <button class="pedido-filtro-btn active" data-f="" onclick="pedidoFiltrar(this)">Todos</button>
+      <button class="pedido-filtro-btn" data-f="pendiente" onclick="pedidoFiltrar(this)">⏳ Pendiente</button>
+      <button class="pedido-filtro-btn" data-f="por_despachar" onclick="pedidoFiltrar(this)">🚀 Despachar</button>
+      <button class="pedido-filtro-btn" data-f="despachado" onclick="pedidoFiltrar(this)">✅ Despachado</button>
+    </div>
+
+    <!-- Lista de pedidos -->
+    <div id="pedidosLista" style="display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;color:var(--text3);padding:20px">Carregando…</div>
+    </div>
+
+    <!-- Modal criar/editar pedido -->
+    <div id="pedidoModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:flex-end;justify-content:center">
+      <div style="background:var(--bg2);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto">
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:16px;font-weight:800" id="pedidoModalTitle">Novo Pedido</div>
+          <button onclick="pedidoFecharModal()" style="background:none;border:none;color:var(--text3);font-size:22px;cursor:pointer">✕</button>
+        </div>
+
+        <input type="hidden" id="pedidoModalId">
+        <input type="hidden" id="pedidoModalSerie">
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+
+          <!-- Cliente -->
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;padding-top:4px">👤 Cliente</div>
+          <div>
+            <label class="input-label">Nome / Empresa</label>
+            <input class="input-field" id="pedidoClienteNome" placeholder="Ex: Comercializadora El Sol">
+          </div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <label class="input-label">Teléfono</label>
+              <input class="input-field" id="pedidoClienteTel" placeholder="(0414) 000-0000" inputmode="tel">
+            </div>
+          </div>
+          <div>
+            <label class="input-label">Dirección / Zona</label>
+            <input class="input-field" id="pedidoClienteDir" placeholder="Av. Libertador, Local 12">
+          </div>
+
+          <!-- Itens do carrinho -->
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text3);letter-spacing:.5px;padding-top:4px">🛒 Produtos</div>
+          <div id="pedidoProdutosCat" style="display:flex;flex-direction:column;gap:7px"></div>
+          <div id="pedidoCarrinhoResumo" style="background:#111827;border-radius:10px;padding:10px 12px;font-size:13px;display:none">
+            <div id="pedidoCarrinhoItens"></div>
+            <div style="display:flex;justify-content:space-between;font-weight:800;margin-top:6px;padding-top:6px;border-top:1px solid #374151">
+              <span>TOTAL</span><span id="pedidoCarrinhoTotal" style="color:var(--green)">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Estado + Método -->
+          <div style="display:flex;gap:8px">
+            <div style="flex:1">
+              <label class="input-label">Estado</label>
+              <select class="input-field" id="pedidoEstado" style="cursor:pointer">
+                <option value="pendiente">⏳ Pendiente</option>
+                <option value="por_despachar">🚀 Por Despachar</option>
+                <option value="despachado">✅ Despachado</option>
+                <option value="anulado">🚫 Anulado</option>
+              </select>
+            </div>
+            <div style="flex:1">
+              <label class="input-label">Método de Pago</label>
+              <select class="input-field" id="pedidoMetodo" style="cursor:pointer">
+                <option value="efectivo">💵 Efectivo</option>
+                <option value="transferencia">📲 Transferencia</option>
+                <option value="otro">🔄 Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Observações -->
+          <div>
+            <label class="input-label">Observaciones / Notas</label>
+            <textarea class="input-field" id="pedidoObs" rows="2" placeholder="Ex: Entregar antes das 10:00 AM. Levar cambio de $20.00" style="resize:none;font-size:13px"></textarea>
+          </div>
+        </div>
+
+        <!-- Botões -->
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn-calc" onclick="pedidoFecharModal()" style="flex:1;background:#374151">Cancelar</button>
+          <button class="btn-save" onclick="pedidoSalvar()" style="flex:2;border-radius:12px">💾 Salvar</button>
+        </div>
+        <button id="pedidoBtnExcluir" onclick="pedidoExcluir()" style="display:none;width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-size:14px">🗑️ Excluir pedido</button>
+      </div>
+    </div>
+
+  </div><!-- /tab-pedidos -->
+
   <div class="tab-content" id="tab-cardapio">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div style="font-size:16px;font-weight:800">📋 Cardápio</div>
@@ -1049,6 +1161,7 @@ window.setTab = function(tab, el) {
   if (tab === 'historial') renderHistorial();
   if (tab === 'resumen') renderResumen();
   if (tab === 'pdv') pdvInit();
+  if (tab === 'pedidos') pedidosLoad();
   if (tab === 'cardapio') cardapioLoad();
 };
 
@@ -1655,6 +1768,267 @@ async function init() {
 }
 
 init();
+
+// ============================================================
+// PEDIDOS — Anotar pedidos de clientes
+// ============================================================
+let pedidosFiltroAtivo = '';
+let pedidosCarrinho = []; // [{produto, qty}] usado no modal
+
+// Helpers localStorage para pedidos offline
+function pedidosGetLocal() { return JSON.parse(localStorage.getItem('pdv_pedidos_cache') || '[]'); }
+function pedidosSaveLocal(arr) { localStorage.setItem('pdv_pedidos_cache', JSON.stringify(arr)); }
+
+function pedidoNextSerie() {
+  const hoy = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const todos = pedidosGetLocal();
+  const deSerie = todos.filter(p => p.serie && p.serie.startsWith('P'+hoy));
+  const ultimo = deSerie.length;
+  return `P${hoy}-${String(ultimo+1).padStart(3,'0')}`;
+}
+
+async function pedidosLoad() {
+  const lista = document.getElementById('pedidosLista');
+  if (!lista) return;
+  lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:16px">Carregando…</div>';
+  if (isOnline) {
+    try {
+      const r = await fetch(`${SUPA_URL}/rest/v1/pdv_pedidos?order=created_at.desc&limit=100`, { headers: PDV_SH });
+      if (r.ok) {
+        const dados = await r.json();
+        pedidosSaveLocal(dados);
+      }
+    } catch {}
+  }
+  pedidosRender();
+}
+
+function pedidosRender() {
+  const lista = document.getElementById('pedidosLista');
+  if (!lista) return;
+  let todos = pedidosGetLocal();
+  if (pedidosFiltroAtivo) todos = todos.filter(p => p.estado === pedidosFiltroAtivo);
+  if (!todos.length) {
+    lista.innerHTML = `<div style="text-align:center;color:var(--text3);padding:28px">
+      ${pedidosFiltroAtivo ? 'Nenhum pedido com esse estado.' : 'Nenhum pedido ainda.<br>Clique em + Pedido para começar.'}</div>`;
+    return;
+  }
+  const estadoLabel = { pendiente:'⏳ Pendiente', por_despachar:'🚀 Por Despachar', despachado:'✅ Despachado', anulado:'🚫 Anulado' };
+  const estadoClass = { pendiente:'estado-pendiente', por_despachar:'estado-por_despachar', despachado:'estado-despachado', anulado:'estado-anulado' };
+  lista.innerHTML = todos.map(p => {
+    const itensStr = (p.itens||[]).map(i=>`${i.produto.emoji}×${i.qty}`).join(' ');
+    return `<div class="pedido-card${p.estado==='anulado'?' anulado':''}" onclick="pedidoAbrirModal(${JSON.stringify(JSON.stringify(p))})">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div>
+          <span style="font-weight:800;font-size:13px;color:var(--green-dark)">${p.serie}</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:8px">${p.hora||''}</span>
+        </div>
+        <span class="pedido-estado ${estadoClass[p.estado]||''}">${estadoLabel[p.estado]||p.estado}</span>
+      </div>
+      <div style="font-weight:700;font-size:14px">${p.cliente_nome||'—'}</div>
+      ${p.cliente_tel ? `<div style="font-size:12px;color:var(--text3)">${p.cliente_tel}</div>` : ''}
+      ${p.cliente_dir ? `<div style="font-size:12px;color:var(--text3)">📍 ${p.cliente_dir}</div>` : ''}
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:12px">
+        <span>${itensStr||'—'}</span>
+        <span style="font-weight:800;color:var(--green)">$${parseFloat(p.total).toFixed(2)}</span>
+      </div>
+      ${p.observaciones ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;border-top:1px solid #374151;padding-top:4px">📌 ${p.observaciones}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.pedidoFiltrar = function(btn) {
+  document.querySelectorAll('.pedido-filtro-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  pedidosFiltroAtivo = btn.dataset.f;
+  pedidosRender();
+};
+
+// ── Modal pedido ──────────────────────────────────────────
+window.pedidoAbrirModal = function(pedidoJson) {
+  const p = pedidoJson ? JSON.parse(pedidoJson) : null;
+  document.getElementById('pedidoModalTitle').textContent = p ? 'Editar Pedido' : 'Novo Pedido';
+  document.getElementById('pedidoModalId').value     = p?.id || '';
+  document.getElementById('pedidoModalSerie').value  = p?.serie || '';
+  document.getElementById('pedidoClienteNome').value = p?.cliente_nome || '';
+  document.getElementById('pedidoClienteTel').value  = p?.cliente_tel || '';
+  document.getElementById('pedidoClienteDir').value  = p?.cliente_dir || '';
+  document.getElementById('pedidoEstado').value      = p?.estado || 'pendiente';
+  document.getElementById('pedidoMetodo').value      = p?.metodo_pago || 'efectivo';
+  document.getElementById('pedidoObs').value         = p?.observaciones || '';
+  // Carrinho
+  pedidosCarrinho = p?.itens ? JSON.parse(JSON.stringify(p.itens)) : [];
+  pedidoRenderCatalogo();
+  pedidoAtualizarCarrinhoResumo();
+  document.getElementById('pedidoBtnExcluir').style.display = p ? 'block' : 'none';
+  document.getElementById('pedidoModal').style.display = 'flex';
+};
+
+window.pedidoFecharModal = function() {
+  document.getElementById('pedidoModal').style.display = 'none';
+  pedidosCarrinho = [];
+};
+
+function pedidoRenderCatalogo() {
+  const el = document.getElementById('pedidoProdutosCat');
+  if (!el) return;
+  const ativos = pdvProdutos.filter(p => p.ativo);
+  if (!ativos.length) { el.innerHTML = '<div style="color:var(--text3);font-size:12px">Cadastre produtos no Cardápio 📋</div>'; return; }
+  el.innerHTML = ativos.map(p => {
+    const q = pedidosCarrinho.find(i => i.produto.id === p.id)?.qty || 0;
+    return `<div class="pdv-prod-card" id="pCard_${p.id}" style="${q>0?'background:#ecfdf5;border-color:var(--green)':''}">
+      <span class="pdv-prod-card-emoji">${p.emoji}</span>
+      <span class="pdv-prod-card-name">${p.nome}</span>
+      <span class="pdv-prod-card-price">$${parseFloat(p.preco).toFixed(2)}</span>
+      <div class="pdv-prod-qty-ctrl">
+        ${q > 0 ? `<button class="pdv-qty-btn pdv-qty-minus" onclick="pedidoAjustarQty('${p.id}',-1)">−</button>
+        <span class="pdv-qty-num">${q}</span>` : ''}
+        <button class="pdv-qty-btn pdv-qty-plus" onclick="pedidoAjustarQty('${p.id}',+1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.pedidoAjustarQty = function(prodId, delta) {
+  const prod = pdvProdutos.find(p => p.id === prodId);
+  if (!prod) return;
+  const idx = pedidosCarrinho.findIndex(i => i.produto.id === prodId);
+  if (idx >= 0) {
+    pedidosCarrinho[idx].qty += delta;
+    if (pedidosCarrinho[idx].qty <= 0) pedidosCarrinho.splice(idx, 1);
+  } else if (delta > 0) {
+    pedidosCarrinho.push({ produto: prod, qty: 1 });
+  }
+  // Atualiza card
+  const cardEl = document.getElementById(`pCard_${prodId}`);
+  if (cardEl) {
+    const q = pedidosCarrinho.find(i => i.produto.id === prodId)?.qty || 0;
+    cardEl.style.background = q > 0 ? '#ecfdf5' : '';
+    cardEl.style.borderColor = q > 0 ? 'var(--green)' : '';
+    const ctrl = cardEl.querySelector('.pdv-prod-qty-ctrl');
+    ctrl.innerHTML = q > 0
+      ? `<button class="pdv-qty-btn pdv-qty-minus" onclick="pedidoAjustarQty('${prodId}',-1)">−</button>
+         <span class="pdv-qty-num">${q}</span>
+         <button class="pdv-qty-btn pdv-qty-plus" onclick="pedidoAjustarQty('${prodId}',+1)">+</button>`
+      : `<button class="pdv-qty-btn pdv-qty-plus" onclick="pedidoAjustarQty('${prodId}',+1)">+</button>`;
+  }
+  pedidoAtualizarCarrinhoResumo();
+};
+
+function pedidoAtualizarCarrinhoResumo() {
+  const resumo = document.getElementById('pedidoCarrinhoResumo');
+  const itensEl = document.getElementById('pedidoCarrinhoItens');
+  const totalEl = document.getElementById('pedidoCarrinhoTotal');
+  if (!resumo) return;
+  if (!pedidosCarrinho.length) { resumo.style.display = 'none'; return; }
+  resumo.style.display = 'block';
+  const total = pedidosCarrinho.reduce((s,i) => s + parseFloat(i.produto.preco)*i.qty, 0);
+  itensEl.innerHTML = pedidosCarrinho.map(i =>
+    `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0">
+      <span>${i.produto.emoji} ${i.produto.nome} ×${i.qty}</span>
+      <span>$${(parseFloat(i.produto.preco)*i.qty).toFixed(2)}</span>
+     </div>`).join('');
+  totalEl.textContent = `$${total.toFixed(2)}`;
+}
+
+window.pedidoSalvar = async function() {
+  const id    = document.getElementById('pedidoModalId').value;
+  const serie = document.getElementById('pedidoModalSerie').value || pedidoNextSerie();
+  const nome  = document.getElementById('pedidoClienteNome').value.trim();
+  const tel   = document.getElementById('pedidoClienteTel').value.trim();
+  const dir   = document.getElementById('pedidoClienteDir').value.trim();
+  const estado  = document.getElementById('pedidoEstado').value;
+  const metodo  = document.getElementById('pedidoMetodo').value;
+  const obs     = document.getElementById('pedidoObs').value.trim();
+  const hoy     = new Date().toISOString().slice(0,10);
+  const hora    = new Date().toTimeString().slice(0,5);
+  const total   = pedidosCarrinho.reduce((s,i) => s + parseFloat(i.produto.preco)*i.qty, 0);
+  const st      = pdvGetState();
+
+  if (!nome) { showToast('⚠️ Nome do cliente obrigatório'); return; }
+  if (!pedidosCarrinho.length) { showToast('⚠️ Adicione pelo menos 1 produto'); return; }
+
+  const payload = {
+    serie, fecha: hoy, hora,
+    operador: st?.operador || 'Vendedor',
+    cliente_nome: nome, cliente_tel: tel, cliente_dir: dir,
+    itens: pedidosCarrinho,
+    total,
+    estado, metodo_pago: metodo, observaciones: obs,
+    caja_id: st?.cajaId || null,
+    tasa_bcv: bcvTasa || null,
+    total_bs: bcvTasa ? parseFloat((total * bcvTasa).toFixed(2)) : null
+  };
+
+  let ok = false;
+  try {
+    if (id) {
+      const r = await fetch(`${SUPA_URL}/rest/v1/pdv_pedidos?id=eq.${id}`, {
+        method:'PATCH', headers: PDV_SH, body: JSON.stringify(payload)
+      });
+      ok = r.ok;
+      if (ok) {
+        const local = pedidosGetLocal();
+        const idx = local.findIndex(p => p.id === id);
+        if (idx >= 0) { local[idx] = { ...local[idx], ...payload }; pedidosSaveLocal(local); }
+      }
+    } else {
+      const r = await fetch(`${SUPA_URL}/rest/v1/pdv_pedidos`, {
+        method:'POST', headers: { ...PDV_SH, 'Prefer': 'return=representation' },
+        body: JSON.stringify(payload)
+      });
+      ok = r.ok;
+      if (ok) {
+        const created = await r.json();
+        const local = pedidosGetLocal();
+        local.unshift(Array.isArray(created) ? created[0] : created);
+        pedidosSaveLocal(local);
+      }
+    }
+  } catch {
+    // Offline: salva local
+    if (!id) {
+      const local = pedidosGetLocal();
+      local.unshift({ ...payload, id: `local_${Date.now()}` });
+      pedidosSaveLocal(local);
+      ok = true;
+      showToast('📴 Salvo offline · será sincronizado');
+    }
+  }
+
+  if (ok) {
+    if (isOnline) showToast(id ? '✅ Pedido atualizado' : `✅ Pedido ${serie} criado`);
+    pedidoFecharModal();
+    pedidosRender();
+  } else {
+    showToast('❌ Erro ao salvar pedido');
+  }
+};
+
+window.pedidoExcluir = async function() {
+  const id = document.getElementById('pedidoModalId').value;
+  if (!id || id.startsWith('local_')) {
+    // Remove só do local
+    const local = pedidosGetLocal().filter(p => p.id !== id);
+    pedidosSaveLocal(local);
+    pedidoFecharModal();
+    pedidosRender();
+    return;
+  }
+  if (!confirm('Excluir pedido permanentemente?')) return;
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/pdv_pedidos?id=eq.${id}`, {
+      method:'DELETE', headers: PDV_SH
+    });
+    if (r.ok) {
+      const local = pedidosGetLocal().filter(p => p.id !== id);
+      pedidosSaveLocal(local);
+      showToast('🗑️ Pedido excluído');
+      pedidoFecharModal();
+      pedidosRender();
+    } else { showToast('❌ Erro ao excluir'); }
+  } catch { showToast('❌ Sem conexão'); }
+};
 
 // ============================================================
 // CARDÁPIO — CRUD de Produtos
